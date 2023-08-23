@@ -6492,7 +6492,7 @@ var PRN = (function() {
 			else if(s.trim().length === 0) { cell.t = 's'; cell.v = s; }
 			else if(s.charCodeAt(0) == 0x3D) {
 				if(s.charCodeAt(1) == 0x22 && s.charCodeAt(s.length - 1) == 0x22) { cell.t = 's'; cell.v = s.slice(2,-1).replace(/""/g,'"'); }
-				else if(fuzzyfmla(s)) { cell.t = 'n'; cell.f = s.slice(1); }
+				else if(fuzzyfmla(s)) { cell.t = 's'; cell.f = s.slice(1); cell.v = s; }
 				else { cell.t = 's'; cell.v = s; } }
 			else if(s == "TRUE") { cell.t = 'b'; cell.v = true; }
 			else if(s == "FALSE") { cell.t = 'b'; cell.v = false; }
