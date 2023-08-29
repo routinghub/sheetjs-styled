@@ -1402,13 +1402,16 @@ describe('parse features', function() {
 	].forEach(function(m) { it(m[0], function() {
 		var wb = X.read(fs.readFileSync(m[1]), {type: TYPE, cellDates: true});
 		var ws = wb.Sheets[wb.SheetNames[0]];
-		var data = X.utils.sheet_to_json(ws, { header: 1, raw: true, rawNumbers: false });
-		assert.ok(data[0][1] instanceof Date);
-		assert.ok(data[1][1] instanceof Date);
-		assert.equal(data[2][1], '$123.00');
-		assert.equal(data[3][1], '98.76%');
-		assert.equal(data[4][1], '456.00');
-		assert.equal(data[5][1], '7,890');
+		var data1 = X.utils.sheet_to_json(ws, { header: 1, raw: true, rawNumbers: false });
+		var data2 = X.utils.sheet_to_json(ws, { header: 1, raw: false, rawNumbers: true });
+		assert.ok(data1[0][1] instanceof Date);
+		assert.ok(data1[1][1] instanceof Date);
+		assert.equal(data1[2][1], '$123.00');
+		assert.equal(data1[3][1], '98.76%');
+		assert.equal(data1[4][1], '456.00');
+		assert.equal(data1[5][1], '7,890');
+		assert.equal(data2[0][1], '7/23/2020');
+		assert.equal(data2[5][1], 7890);
 	}); }); });
 
 	it('date system', function() {[
