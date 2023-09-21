@@ -636,10 +636,13 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 			case 'help-message': break; // 9.4.6 <table:
 			case 'error-message': break; // 9.4.7 <table:
 			case 'database-ranges': break; // 9.4.14 <table:database-ranges>
+
+			/* 9.5 Filters */
 			case 'filter': break; // 9.5.2 <table:filter>
 			case 'filter-and': break; // 9.5.3 <table:filter-and>
 			case 'filter-or': break; // 9.5.4 <table:filter-or>
 			case 'filter-condition': break; // 9.5.5 <table:filter-condition>
+			case 'filter-set-item': break; // 9.5.6 <table:filter-condition>
 
 			case 'list-level-style-bullet': break; // 16.31 <text:
 			case 'list-level-style-number': break; // 16.32 <text:

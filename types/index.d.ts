@@ -151,8 +151,13 @@ export interface UTCOption {
     UTC?: boolean;
 }
 
+export interface DenseOption {
+    /** If true, generate dense-mode worksheets */
+    dense?: boolean;
+}
+
 /** Options for read and readFile */
-export interface ParsingOptions extends UTCOption, CommonOptions {
+export interface ParsingOptions extends UTCOption, CommonOptions, DenseOption {
     /** Input data encoding */
     type?: 'base64' | 'binary' | 'buffer' | 'file' | 'array' | 'string';
 
@@ -239,9 +244,6 @@ export interface ParsingOptions extends UTCOption, CommonOptions {
     /** If true, preserve _xlfn. prefixes in formula function names */
     xlfn?: boolean;
 
-    /** If true, generate dense-mode worksheets */
-    dense?: boolean;
-
     /**
      * For single-sheet formats (including CSV), override the worksheet name
      * @default "Sheet1"
@@ -274,6 +276,9 @@ export interface WritingOptions extends CommonOptions {
      * @default false
      */
     compression?: boolean;
+
+    /** Overwride theme XML when exporting to XLSX/XLSM/XLSB */
+    themeXLSX?: string;
 
     /**
      * Suppress "number stored as text" errors in generated files
@@ -841,7 +846,7 @@ export interface UTCDateOption {
     UTC?: boolean;
 }
 
-export interface AOA2SheetOpts extends CommonOptions, UTCDateOption, DateNFOption {
+export interface AOA2SheetOpts extends CommonOptions, UTCDateOption, DateNFOption, DenseOption {
     /**
      * Create cell objects for stub cells
      * @default false
@@ -851,7 +856,7 @@ export interface AOA2SheetOpts extends CommonOptions, UTCDateOption, DateNFOptio
 
 export interface SheetAOAOpts extends AOA2SheetOpts, OriginOption {}
 
-export interface JSON2SheetOpts extends CommonOptions, UTCDateOption, DateNFOption, OriginOption {
+export interface JSON2SheetOpts extends CommonOptions, UTCDateOption, DateNFOption, OriginOption, DenseOption {
     /** Use specified column order */
     header?: string[];
 
