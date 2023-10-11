@@ -108,6 +108,13 @@ function sheet_to_workbook(sheet/*:Worksheet*/, opts)/*:Workbook*/ {
 	return { SheetNames: [n], Sheets: sheets };
 }
 
+function sheet_new(opts) {
+	var out = {};
+	var o = opts || {};
+	if(o.dense) out["!data"] = [];
+	return out;
+}
+
 function sheet_add_aoa(_ws/*:?Worksheet*/, data/*:AOA*/, opts/*:?any*/)/*:Worksheet*/ {
 	var o = opts || {};
 	var dense = _ws ? (_ws["!data"] != null) : o.dense;

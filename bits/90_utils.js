@@ -297,9 +297,11 @@ function wb_sheet_idx(wb/*:Workbook*/, sh/*:number|string*/) {
 	} else throw new Error("Cannot find sheet |" + sh + "|");
 }
 
-/* simple blank workbook object */
-function book_new()/*:Workbook*/ {
-	return { SheetNames: [], Sheets: {} };
+/* simple blank or single-sheet workbook object */
+function book_new(ws/*:?Worksheet*/, wsname/*:?string*/)/*:Workbook*/ {
+	var wb = { SheetNames: [], Sheets: {} };
+	if(ws) book_append_sheet(wb, ws, wsname || "Sheet1");
+	return wb;
 }
 
 /* add a worksheet to the end of a given workbook */

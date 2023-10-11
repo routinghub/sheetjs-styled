@@ -968,8 +968,11 @@ export interface XLSX$Utils {
 
     /* --- General Utilities --- */
 
-    /** Creates a new workbook */
-    book_new(): WorkBook;
+    /** Create a new workbook */
+    book_new(ws?: WorkSheet, wsname?: string): WorkBook;
+
+    /** Create a new worksheet */
+    sheet_new(opts?: DenseOption): WorkSheet;
 
     /** Append a worksheet to a workbook, returns new worksheet name */
     book_append_sheet(workbook: WorkBook, worksheet: WorkSheet, name?: string, roll?: boolean): string;
