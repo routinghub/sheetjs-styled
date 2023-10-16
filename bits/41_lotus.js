@@ -977,13 +977,25 @@ var WK_ = /*#__PURE__*/(function() {
 		/*::[*/0x0E/*::*/: "dd-mmm-yyyy",
 		/*::[*/0x0F/*::*/: "mmm-yyyy",
 
-		/*::[*/0x22/*::*/: "0.00",
-		/*::[*/0x32/*::*/: "0.00;[Red]0.00",
-		/*::[*/0x42/*::*/: "0.00;\(0.00\)",
-		/*::[*/0x52/*::*/: "0.00;[Red]\(0.00\)",
-
-		/*::[*/162/*::*/: '"$"#,##0;\\("$"#,##0\\)' // slightly different from SSF 5
+		/* It is suspected that the the low nybble specifies decimal places
+		/*::[*/0x0022/*::*/: "0.00",
+		/*::[*/0x0032/*::*/: "0.00;[Red]0.00",
+		/*::[*/0x0042/*::*/: "0.00;\(0.00\)",
+		/*::[*/0x0052/*::*/: "0.00;[Red]\(0.00\)",
+		/*::[*/0x00A2/*::*/: '"$"#,##0.00;\\("$"#,##0.00\\)',
+		/*::[*/0x0120/*::*/: '0%',
+		/*::[*/0x0130/*::*/: '0E+00',
+		/*::[*/0x0140/*::*/: '# ?/?'
 	};
+
+	function parse_qpw_str(p) {
+		var cch = p.read_shift(2);
+		var flags = p.read_shift(1);
+		/* TODO: find examples with nonzero flags */
+		if(flags != 0) throw "unsupported QPW string type " + flags.toString(16);
+		return p.read_shift(cch, "sbcs-cont");
+	}
+
 	/* QPW uses a different set of record types */
 	function qpw_to_workbook_buf(d, opts)/*:Workbook*/ {
 		prep_blob(d, 0);
@@ -1094,7 +1106,11 @@ var WK_ = /*#__PURE__*/(function() {
 							case 4: cell = { t: "n", v: parse_RkNumber(p) }; break;
 							case 5: cell = { t: "n", v: p.read_shift(8, 'f') }; break;
 							case 7: cell = { t: "s", v: SST[type = p.read_shift(4) - 1] }; break;
-							case 8: cell = { t: "n", v: p.read_shift(8, 'f') }; p.l += 2; /* cell.f = formulae[p.read_shift(4)]; */ p.l += 4; break;
+							case 8:
+								cell = { t: "n", v: p.read_shift(8, 'f') };
+								p.l += 2; /* cell.f = formulae[p.read_shift(4)]; */ p.l += 4;
+								if(isNaN(cell.v)) cell = { t: "e", v: 0x0F }; // #VALUE!
+								break;
 							default: throw "Unrecognized QPW cell type " + (flags & 0x1F);
 						}
 						if(fmtidx != -1 && (FMTS[fmtidx - 1]||{}).z) cell.z = FMTS[fmtidx-1].z;
@@ -1138,6 +1154,17 @@ var WK_ = /*#__PURE__*/(function() {
 							++R; --cnt;
 						}
 					}
+				} break;
+
+				case 0x0C02: { /* String (result of string formula expression) */
+					C = p.read_shift(2);
+					R = p.read_shift(4);
+					var str = parse_qpw_str(p);
+					/* TODO: QP10 record has an additional unknown character after the string */
+					if(s["!data"] != null) {
+						if(!s["!data"][R]) s["!data"][R] = [];
+						s["!data"][R][C] = { t:"s", v:str };
+					} else s[encode_col(C) + encode_row(R)] = { t:"s", v:str };
 				} break;
 
 				default: break;

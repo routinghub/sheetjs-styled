@@ -1117,7 +1117,7 @@ function s5s_to_iwa_comment(s5s) {
   return out;
 }
 function parse_TST_TableModelArchive(M, root, ws, opts) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   var pb = parse_shallow(root.data);
   var range = { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
   range.e.r = (varint_to_i32(pb[6][0].data) >>> 0) - 1;
@@ -1146,7 +1146,17 @@ function parse_TST_TableModelArchive(M, root, ws, opts) {
     lut.nfmt = parse_TST_TableDataList(M, M[parse_TSP_Reference(store[22][0].data)][0]);
   var tile = parse_shallow(store[3][0].data);
   var _R = 0;
-  tile[1].forEach(function(t) {
+  if (!((_h = store[9]) == null ? void 0 : _h[0]))
+    throw "NUMBERS file missing row tree";
+  var rtt = parse_shallow(store[9][0].data)[1].map(function(p) {
+    return parse_shallow(p.data);
+  });
+  rtt.forEach(function(kv) {
+    _R = varint_to_i32(kv[1][0].data);
+    var tidx = varint_to_i32(kv[2][0].data);
+    var t = tile[1][tidx];
+    if (!t)
+      throw "NUMBERS missing tile " + tidx;
     var tl = parse_shallow(t.data);
     var ref2 = M[parse_TSP_Reference(tl[2][0].data)][0];
     var mtype2 = varint_to_i32(ref2.meta[1][0].data);
@@ -1169,12 +1179,12 @@ function parse_TST_TableModelArchive(M, root, ws, opts) {
     });
     _R += _tile.nrows;
   });
-  if ((_h = store[13]) == null ? void 0 : _h[0]) {
+  if ((_i = store[13]) == null ? void 0 : _i[0]) {
     var ref = M[parse_TSP_Reference(store[13][0].data)][0];
     var mtype = varint_to_i32(ref.meta[1][0].data);
     if (mtype != 6144)
       throw new Error("Expected merge type 6144, found ".concat(mtype));
-    ws["!merges"] = (_i = parse_shallow(ref.data)) == null ? void 0 : _i[1].map(function(pi) {
+    ws["!merges"] = (_j = parse_shallow(ref.data)) == null ? void 0 : _j[1].map(function(pi) {
       var merge = parse_shallow(pi.data);
       var origin = u8_to_dataview(parse_shallow(merge[1][0].data)[1][0].data), size = u8_to_dataview(parse_shallow(merge[2][0].data)[1][0].data);
       return {

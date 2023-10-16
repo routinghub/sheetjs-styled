@@ -926,8 +926,18 @@ function parse_TST_TableModelArchive(M: MessageSpace, root: IWAMessage, ws: Work
 	// .TST.TileStorage
 	var tile = parse_shallow(store[3][0].data);
 	var _R = 0;
-	/* TODO: should this list be sorted by id ? */
-	tile[1].forEach(t => {
+
+	// .TST.TableRBTree
+	if(!store[9]?.[0]) throw "NUMBERS file missing row tree";
+	var rtt = parse_shallow(store[9][0].data)[1].map(p => parse_shallow(p.data));
+
+	/* TODO: check examples with ctt */
+	rtt.forEach(kv => {
+		// .TST.TableRBTree.Node
+		_R = varint_to_i32(kv[1][0].data);
+		var tidx = varint_to_i32(kv[2][0].data);
+		var t = tile[1][tidx];
+		if(!t) throw "NUMBERS missing tile " + tidx;
 		var tl = (parse_shallow(t.data));
 		// var id = varint_to_i32(tl[1][0].data);
 		var ref = M[parse_TSP_Reference(tl[2][0].data)][0];
