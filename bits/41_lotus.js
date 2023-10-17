@@ -184,6 +184,7 @@ var WK_ = /*#__PURE__*/(function() {
 		if(+o.codepage >= 0) set_cp(+o.codepage);
 		if(o.type == "string") throw new Error("Cannot write WK1 to JS string");
 		var ba = buf_array();
+		if(!ws["!ref"]) throw new Error("Cannot export empty sheet to WK1");
 		var range = safe_decode_range(ws["!ref"]);
 		var dense = ws["!data"] != null;
 		var cols = [];
@@ -977,7 +978,7 @@ var WK_ = /*#__PURE__*/(function() {
 		/*::[*/0x0E/*::*/: "dd-mmm-yyyy",
 		/*::[*/0x0F/*::*/: "mmm-yyyy",
 
-		/* It is suspected that the the low nybble specifies decimal places
+		/* It is suspected that the the low nybble specifies decimal places */
 		/*::[*/0x0022/*::*/: "0.00",
 		/*::[*/0x0032/*::*/: "0.00;[Red]0.00",
 		/*::[*/0x0042/*::*/: "0.00;\(0.00\)",

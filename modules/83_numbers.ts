@@ -1641,6 +1641,7 @@ var USE_WIDE_ROWS = true;
 
 /** Write .TST.TableModelArchive */
 function write_numbers_tma(cfb: CFB$Container, deps: Dependents, ws: WorkSheet, tmaroot: IWAArchiveInfo, tmafile: IWAArchiveInfo[], tmaref: number) {
+	if(!ws["!ref"]) throw new Error("Cannot export empty sheet to NUMBERS");
 	var range = decode_range(ws["!ref"] as string);
 	range.s.r = range.s.c = 0;
 

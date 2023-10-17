@@ -1846,6 +1846,8 @@ function write_numbers_ws(cfb, deps, ws, wsname, sheetidx, rootref) {
 }
 var USE_WIDE_ROWS = true;
 function write_numbers_tma(cfb, deps, ws, tmaroot, tmafile, tmaref) {
+  if (!ws["!ref"])
+    throw new Error("Cannot export empty sheet to NUMBERS");
   var range = decode_range(ws["!ref"]);
   range.s.r = range.s.c = 0;
   var trunc = false;

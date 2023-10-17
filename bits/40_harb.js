@@ -190,7 +190,7 @@ function dbf_to_aoa(buf, opts)/*:AOA*/ {
 				case 'L': switch(s.trim().toUpperCase()) {
 					case 'Y': case 'T': out[R][C] = true; break;
 					case 'N': case 'F': out[R][C] = false; break;
-					case '': case '?': break;
+					case '': case '\x00': case '?': break;
 					default: throw new Error("DBF Unrecognized L:|" + s + "|");
 					} break;
 				case 'M': /* TODO: handle memo files */
@@ -252,6 +252,7 @@ function dbf_to_workbook(buf, opts)/*:Workbook*/ {
 
 var _RLEN = { 'B': 8, 'C': 250, 'L': 1, 'D': 8, '?': 0, '': 0 };
 function sheet_to_dbf(ws/*:Worksheet*/, opts/*:WriteOpts*/) {
+	if(!ws["!ref"]) throw new Error("Cannot export empty sheet to DBF");
 	var o = opts || {};
 	var old_cp = current_codepage;
 	if(+o.codepage >= 0) set_cp(+o.codepage);
@@ -635,7 +636,7 @@ var SYLK = /*#__PURE__*/(function() {
 		if(!opts) opts = {}; opts._formats = ["General"];
 		/* TODO: codepage */
 		var preamble/*:Array<string>*/ = ["ID;PSheetJS;N;E"], o/*:Array<string>*/ = [];
-		var r = safe_decode_range(ws['!ref']), cell/*:Cell*/;
+		var r = safe_decode_range(ws['!ref']||"A1"), cell/*:Cell*/;
 		var dense = ws["!data"] != null;
 		var RS = "\r\n";
 		var d1904 = (((wb||{}).Workbook||{}).WBProps||{}).date1904;
@@ -644,7 +645,7 @@ var SYLK = /*#__PURE__*/(function() {
 		preamble.push("P;PGeneral");
 		/* Excel has been inconsistent in comment placement */
 		var R = r.s.r, C = r.s.c, p = [];
-		for(R = r.s.r; R <= r.e.r; ++R) {
+		if(ws["!ref"]) for(R = r.s.r; R <= r.e.r; ++R) {
 			if(dense && !ws["!data"][R]) continue;
 			p = [];
 			for(C = r.s.c; C <= r.e.c; ++C) {
@@ -654,7 +655,7 @@ var SYLK = /*#__PURE__*/(function() {
 			}
 			if(p.length) o.push(p.join(RS));
 		}
-		for(R = r.s.r; R <= r.e.r; ++R) {
+		if(ws["!ref"]) for(R = r.s.r; R <= r.e.r; ++R) {
 			if(dense && !ws["!data"][R]) continue;
 			p = [];
 			for(C = r.s.c; C <= r.e.c; ++C) {
@@ -674,7 +675,7 @@ var SYLK = /*#__PURE__*/(function() {
 		if(ws['!cols']) write_ws_cols_sylk(preamble, ws['!cols']);
 		if(ws['!rows']) write_ws_rows_sylk(preamble, ws['!rows']);
 
-		preamble.push("B;Y" + (r.e.r - r.s.r + 1) + ";X" + (r.e.c - r.s.c + 1) + ";D" + [r.s.c,r.s.r,r.e.c,r.e.r].join(" "));
+		if(ws["!ref"]) preamble.push("B;Y" + (r.e.r - r.s.r + 1) + ";X" + (r.e.c - r.s.c + 1) + ";D" + [r.s.c,r.s.r,r.e.c,r.e.r].join(" "));
 		preamble.push("O;L;D;B" + (d1904 ? ";V4" : "") + ";K47;G100 0.001");
 
 		delete opts._formats;
@@ -747,6 +748,7 @@ var DIF = /*#__PURE__*/(function() {
 	function make_value_str(s/*:string*/)/*:string*/ { return "1,0\r\n\"" + s.replace(/"/g,'""') + '"'; }
 	function sheet_to_dif(ws/*:Worksheet*//*::, opts:?any*/)/*:string*/ {
 		var _DIF_XL = DIF_XL;
+		if(!ws["!ref"]) throw new Error("Cannot export empty sheet to DIF");
 		var r = safe_decode_range(ws['!ref']);
 		var dense = ws["!data"] != null;
 		var o/*:Array<string>*/ = [
@@ -1084,6 +1086,7 @@ var PRN = /*#__PURE__*/(function() {
 
 	function sheet_to_prn(ws/*:Worksheet*//*::, opts:?any*/)/*:string*/ {
 		var o/*:Array<string>*/ = [];
+		if(!ws["!ref"]) return "";
 		var r = safe_decode_range(ws['!ref']), cell/*:Cell*/;
 		var dense = ws["!data"] != null;
 		for(var R = r.s.r; R <= r.e.r; ++R) {

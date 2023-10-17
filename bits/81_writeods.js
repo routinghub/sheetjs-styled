@@ -364,6 +364,7 @@ var write_content_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function
 		wb.SheetNames.map(function(n) { return wb.Sheets[n]; }).forEach(function(ws) {
 			if(!ws) return;
 			var dense = (ws["!data"] != null);
+			if(!ws["!ref"]) return;
 			var range = decode_range(ws["!ref"]);
 			for(var R = 0; R <= range.e.r; ++R) for(var C = 0; C <= range.e.c; ++C) {
 				var c = dense ? (ws["!data"][R]||[])[C] : ws[encode_cell({r:R,c:C})];

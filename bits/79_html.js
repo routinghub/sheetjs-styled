@@ -122,9 +122,9 @@ function sheet_to_html(ws/*:Worksheet*/, opts/*:?Sheet2HTMLOpts*//*, wb:?Workboo
 	var header = o.header != null ? o.header : HTML_BEGIN;
 	var footer = o.footer != null ? o.footer : HTML_END;
 	var out/*:Array<string>*/ = [header];
-	var r = decode_range(ws['!ref']);
+	var r = decode_range(ws['!ref'] || "A1");
 	out.push(make_html_preamble(ws, r, o));
-	for(var R = r.s.r; R <= r.e.r; ++R) out.push(make_html_row(ws, r, R, o));
+	if(ws["!ref"]) for(var R = r.s.r; R <= r.e.r; ++R) out.push(make_html_row(ws, r, R, o));
 	out.push("</table>" + footer);
 	return out.join("");
 }
