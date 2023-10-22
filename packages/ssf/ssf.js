@@ -687,7 +687,7 @@ function fmt_is_date(fmt) {
 }
 SSF.is_date = fmt_is_date;
 function eval_fmt(fmt, v, opts, flen) {
-	var out = [], o = "", i = 0, c = "", lst='t', dt, j, cc;
+	var out = [], o = "", i = 0, c = "", lst='t', dt, j, cc, sec = false, usec = false;
 	var hr='H';
 	/* Tokenize */
 	while(i < fmt.length) {
@@ -716,6 +716,7 @@ function eval_fmt(fmt, v, opts, flen) {
 				if(v < 0) return "";
 				if(dt==null) { dt=parse_date_code(v, opts); if(dt==null) return ""; }
 				o = c; while(++i < fmt.length && fmt.charAt(i).toLowerCase() === c) o+=c;
+				if(c === 's') sec = true;
 				if(c === 'm' && lst.toLowerCase() === 'h') c = 'M';
 				if(c === 'h') c = hr;
 				out[out.length] = {t:c, v:o}; lst = c; break;
@@ -745,7 +746,7 @@ function eval_fmt(fmt, v, opts, flen) {
 			case '.':
 				if(dt != null) {
 					o = c; while(++i < fmt.length && (c=fmt.charAt(i)) === "0") o += c;
-					out[out.length] = {t:'s', v:o}; break;
+					out[out.length] = {t:'s', v:o}; usec=true; break;
 				}
 				/* falls through */
 			case '0': case '#':
@@ -765,6 +766,11 @@ function eval_fmt(fmt, v, opts, flen) {
 				if(",$-+/():!^&'~{}<>=€acfijklopqrtuvwxzP".indexOf(c) === -1) throw new Error('unrecognized character ' + c + ' in ' + fmt);
 				out[out.length] = {t:'t', v:c}; ++i; break;
 		}
+	}
+
+	/* Round number up if displaying seconds with no microseconds */
+	if (dt && (dt.S + dt.u >= 59.5) && sec && !usec) {
+		dt=parse_date_code(Math.round((v - Math.floor(v))*86400)/86400, opts)
 	}
 
 	/* Scan for date/time parts */
@@ -793,6 +799,7 @@ function eval_fmt(fmt, v, opts, flen) {
 if(dt.u >= 0.5) { dt.u = 0; ++dt.S; }
 			if(dt.S >=  60) { dt.S = 0; ++dt.M; }
 			if(dt.M >=  60) { dt.M = 0; ++dt.H; }
+			if(dt.H >=  24) { dt.H = 0; ++dt.d; }
 			break;
 		case 2:
 if(dt.u >= 0.5) { dt.u = 0; ++dt.S; }
