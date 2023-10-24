@@ -2,8 +2,8 @@
 /* vim: set ts=2: */
 /*jshint -W041 */
 var SSF = ({});
-var make_ssf = function make_ssf(SSF){
-SSF.version = '0.11.2';
+function make_ssf(SSF){
+SSF.version = '0.11.3';
 function _strrev(x) { var o = "", i = x.length-1; while(i>=0) o += x.charAt(i--); return o; }
 function fill(c,l) { var o = ""; while(o.length < l) o+=c; return o; }
 function pad0(v,d){var t=""+v; return t.length>=d?t:fill('0',d-t.length)+t;}
@@ -157,8 +157,20 @@ function frac(x, D, mixed) {
 	var q = Math.floor(sgn * P/Q);
 	return [q, sgn*P - q*Q, Q];
 }
+function normalize_xl_unsafe(v) {
+	var s = v.toPrecision(16);
+	if(s.indexOf("e") > -1) {
+		var m = s.slice(0, s.indexOf("e"));
+		m = m.indexOf(".") > -1 ? m.slice(0, (m.slice(0,2) == "0." ? 17 : 16)) : (m.slice(0,15) + fill("0", m.length - 15));
+		return m + s.slice(s.indexOf("e"));
+	}
+	var n = s.indexOf(".") > -1 ? s.slice(0, (s.slice(0,2) == "0." ? 17 : 16)) : (s.slice(0,15) + fill("0", s.length - 15));
+	return Number(n);
+}
+
 function parse_date_code(v,opts,b2) {
 	if(v > 2958465 || v < 0) return null;
+	v = normalize_xl_unsafe(v);
 	var date = (v|0), time = Math.floor(86400 * (v - date)), dow=0;
 	var dout=[];
 	var out={D:date, T:time, u:86400*(v-date)-time,y:0,m:0,d:0,H:0,M:0,S:0,q:0};
@@ -197,10 +209,6 @@ function datenum_local(v, date1904) {
 	else if(v >= base1904) epoch += 24*60*60*1000;
 	return (epoch - (dnthresh + (v.getTimezoneOffset() - basedate.getTimezoneOffset()) * 60000)) / (24 * 60 * 60 * 1000);
 }
-/* The longest 32-bit integer text is "-4294967296", exactly 11 chars */
-function general_fmt_int(v) { return v.toString(10); }
-SSF._general_int = general_fmt_int;
-
 /* ECMA-376 18.8.30 numFmt*/
 /* Note: `toPrecision` uses standard form when prec > E and E >= -6 */
 var general_fmt_num = (function make_general_fmt_num() {
@@ -253,6 +261,7 @@ SSF._general_num = general_fmt_num;
 	- "up to 11 characters" displayed for numbers
 	- Default date format (code 14) used for Dates
 
+	The longest 32-bit integer text is "-2147483648", exactly 11 chars
 	TODO: technically the display depends on the width of the cell
 */
 function general_fmt(v, opts) {
@@ -331,7 +340,7 @@ if(ss0 >= 2) tt = ss0 === 3 ? 1000 : 100;
 		switch(fmt) {
 			case '[h]': case '[hh]': out = val.D*24+val.H; break;
 			case '[m]': case '[mm]': out = (val.D*24+val.H)*60+val.M; break;
-			case '[s]': case '[ss]': out = ((val.D*24+val.H)*60+val.M)*60+Math.round(val.S+val.u); break;
+			case '[s]': case '[ss]': out = ((val.D*24+val.H)*60+val.M)*60+(ss0 == 0 ? Math.round(val.S+val.u) : val.S); break;
 			default: throw 'bad abstime format: ' + fmt;
 		} outl = fmt.length === 3 ? 1 : 2; break;
 		case 101: /* 'e' era */
@@ -687,7 +696,7 @@ function fmt_is_date(fmt) {
 }
 SSF.is_date = fmt_is_date;
 function eval_fmt(fmt, v, opts, flen) {
-	var out = [], o = "", i = 0, c = "", lst='t', dt, j, cc, sec = false, usec = false;
+	var out = [], o = "", i = 0, c = "", lst='t', dt, j, cc;
 	var hr='H';
 	/* Tokenize */
 	while(i < fmt.length) {
@@ -716,7 +725,6 @@ function eval_fmt(fmt, v, opts, flen) {
 				if(v < 0) return "";
 				if(dt==null) { dt=parse_date_code(v, opts); if(dt==null) return ""; }
 				o = c; while(++i < fmt.length && fmt.charAt(i).toLowerCase() === c) o+=c;
-				if(c === 's') sec = true;
 				if(c === 'm' && lst.toLowerCase() === 'h') c = 'M';
 				if(c === 'h') c = hr;
 				out[out.length] = {t:c, v:o}; lst = c; break;
@@ -746,7 +754,7 @@ function eval_fmt(fmt, v, opts, flen) {
 			case '.':
 				if(dt != null) {
 					o = c; while(++i < fmt.length && (c=fmt.charAt(i)) === "0") o += c;
-					out[out.length] = {t:'s', v:o}; usec=true; break;
+					out[out.length] = {t:'s', v:o}; break;
 				}
 				/* falls through */
 			case '0': case '#':
@@ -768,21 +776,17 @@ function eval_fmt(fmt, v, opts, flen) {
 		}
 	}
 
-	/* Round number up if displaying seconds with no microseconds */
-	if (dt && (dt.S + dt.u >= 59.5) && sec && !usec) {
-		dt=parse_date_code(Math.round((v - Math.floor(v))*86400)/86400, opts)
-	}
-
 	/* Scan for date/time parts */
 	var bt = 0, ss0 = 0, ssm;
 	for(i=out.length-1, lst='t'; i >= 0; --i) {
 		switch(out[i].t) {
 			case 'h': case 'H': out[i].t = hr; lst='h'; if(bt < 1) bt = 1; break;
 			case 's':
-				if((ssm=out[i].v.match(/\.0+$/))) ss0=Math.max(ss0,ssm[0].length-1);
+				if((ssm=out[i].v.match(/\.0+$/))) { ss0=Math.max(ss0,ssm[0].length-1); bt = 4;}
 				if(bt < 3) bt = 3;
 			/* falls through */
-			case 'd': case 'y': case 'M': case 'e': lst=out[i].t; break;
+			case 'd': case 'y': case 'e': lst=out[i].t; break;
+			case 'M': lst=out[i].t; if(bt < 2) bt = 2; break;
 			case 'm': if(lst === 's') { out[i].t = 'M'; if(bt < 2) bt = 2; } break;
 			case 'X': /*if(out[i].v === "B2");*/
 				break;
@@ -792,18 +796,29 @@ function eval_fmt(fmt, v, opts, flen) {
 				if(bt < 3 && out[i].v.match(/[Ss]/)) bt = 3;
 		}
 	}
+
 	/* time rounding depends on presence of minute / second / usec fields */
+	var _dt;
 	switch(bt) {
 		case 0: break;
 		case 1:
-if(dt.u >= 0.5) { dt.u = 0; ++dt.S; }
+		case 2:
+		case 3:
+			if(dt.u >= 0.5) { dt.u = 0; ++dt.S; }
 			if(dt.S >=  60) { dt.S = 0; ++dt.M; }
 			if(dt.M >=  60) { dt.M = 0; ++dt.H; }
-			if(dt.H >=  24) { dt.H = 0; ++dt.d; }
+			if(dt.H >=  24) { dt.H = 0; ++dt.D; _dt = parse_date_code(dt.D); _dt.u = dt.u; _dt.S = dt.S; _dt.M = dt.M; _dt.H = dt.H; dt = _dt; }
 			break;
-		case 2:
-if(dt.u >= 0.5) { dt.u = 0; ++dt.S; }
+		case 4:
+			switch(ss0) {
+				case 1: dt.u = Math.round(dt.u * 10)/10; break;
+				case 2: dt.u = Math.round(dt.u * 100)/100; break;
+				case 3: dt.u = Math.round(dt.u * 1000)/1000; break;
+			}
+			if(dt.u >=   1) { dt.u = 0; ++dt.S; }
 			if(dt.S >=  60) { dt.S = 0; ++dt.M; }
+			if(dt.M >=  60) { dt.M = 0; ++dt.H; }
+			if(dt.H >=  24) { dt.H = 0; ++dt.D; _dt = parse_date_code(dt.D); _dt.u = dt.u; _dt.S = dt.S; _dt.M = dt.M; _dt.H = dt.H; dt = _dt; }
 			break;
 	}
 
@@ -978,7 +993,8 @@ SSF.load_table = function load_table(tbl) {
 };
 SSF.init_table = init_table;
 SSF.format = format;
-};
+SSF.choose_format = choose_fmt;
+}
 make_ssf(SSF);
 /*global module */
 if(typeof module !== 'undefined' && typeof DO_NOT_EXPORT_SSF === 'undefined') module.exports = SSF;

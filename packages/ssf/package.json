@@ -1,6 +1,6 @@
 {
 	"name": "ssf",
-	"version": "0.11.2",
+	"version": "0.11.3",
 	"author": "sheetjs",
 	"description": "Format data using ECMA-376 spreadsheet Format Codes",
 	"keywords": [
@@ -23,7 +23,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git://github.com/SheetJS/sheetjs.git",
+		"url": "https://git.sheetjs.com/SheetJS/sheetjs",
 		"directory": "packages/ssf"
 	},
 	"scripts": {
@@ -48,9 +48,9 @@
 			"holes"
 		]
 	},
-	"homepage": "http://sheetjs.com/",
+	"homepage": "https://sheetjs.com/",
 	"bugs": {
-		"url": "https://github.com/SheetJS/sheetjs/issues"
+		"url": "https://git.sheetjs.com/SheetJS/sheetjs/issues"
 	},
 	"license": "Apache-2.0",
 	"engines": {
