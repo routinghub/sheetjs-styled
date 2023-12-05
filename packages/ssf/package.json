@@ -19,7 +19,8 @@
 		"blanket": "~1.2.3",
 		"dtslint": "^0.1.2",
 		"mocha": "~2.5.3",
-		"typescript": "2.2.0"
+		"typescript": "2.2.0",
+		"xlsx": "https://cdn.sheetjs.com/xlsx-0.20.0/xlsx-0.20.0.tgz"
 	},
 	"repository": {
 		"type": "git",

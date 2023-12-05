@@ -9,7 +9,9 @@
 	"main": "dist/dta.js",
 	"types": "types",
 	"files": [
-		"dist/"
+		"bin/",
+		"dist/",
+		"types/"
 	],
 	"repository": {
 		"type": "git",

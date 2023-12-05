@@ -1366,17 +1366,20 @@ Deno.test('parse features', async function(t) {
 	});
 
 	await t.step('data types formats', async function(t) {var dtf = [
-		['xlsx', paths.dtfxlsx],
+		['xlsx', paths.dtfxlsx]
 	]; for(var j = 0; j < dtf.length; ++j) { var m = dtf[j]; await t.step(m[0], async function(t) {
 		var wb = X.read(fs.readFileSync(m[1]), {type: TYPE, cellDates: true});
 		var ws = wb.Sheets[wb.SheetNames[0]];
-		var data = X.utils.sheet_to_json<any>(ws, { header: 1, raw: true, rawNumbers: false });
-		assert.assert(data[0][1] instanceof Date);
-		assert.assert(data[1][1] instanceof Date);
-		assert.equal(data[2][1], '$123.00');
-		assert.equal(data[3][1], '98.76%');
-		assert.equal(data[4][1], '456.00');
-		assert.equal(data[5][1], '7,890');
+		var data1 = X.utils.sheet_to_json<any>(ws, { header: 1, raw: true, rawNumbers: false });
+		var data2 = X.utils.sheet_to_json<any>(ws, { header: 1, raw: false, rawNumbers: true });
+		assert.assert(data1[0][1] instanceof Date);
+		assert.assert(data1[1][1] instanceof Date);
+		assert.equal(data1[2][1], '$123.00');
+		assert.equal(data1[3][1], '98.76%');
+		assert.equal(data1[4][1], '456.00');
+		assert.equal(data1[5][1], '7,890');
+		assert.equal(data2[0][1], '7/23/2020');
+		assert.equal(data2[5][1], 7890);
 	}); } });
 
 	await t.step('date system', async function(t) {[
@@ -2083,6 +2086,15 @@ Deno.test('json output', async function(t) {
 				assert.assert((n&4) ? (k === null) : (k !== null));
 			}
 		});
+	});
+	await t.step('should force UTC in formatted strings', async function(t) {
+		var ws: X.WorkSheet =  { "!ref": "A1", "A1": { t: 'd', v: new Date(Date.UTC(2002, 11, 24, 0, 0, 0, 0)) } };
+		assert.equal(X.utils.sheet_to_json<string[]>(ws, {header: 1, UTC: true, raw: false, dateNF: 'd"/"m"/"yyyy'})[0][0], "24/12/2002");
+		delete ws.A1.w;
+		assert.equal(X.utils.sheet_to_json<string[]>(ws, {header: 1, UTC: false, raw: false, dateNF: 'd"/"m"/"yyyy'})[0][0], "24/12/2002");
+
+		assert.equal(X.utils.sheet_to_json<number[]>(ws, {header: 1, UTC: true, raw: true, dateNF: 'd"/"m"/"yyyy'})[0][0].valueOf(), 1040688000000);
+		assert.equal(X.utils.sheet_to_json<number[]>(ws, {header: 1, UTC: false, raw: true, dateNF: 'd"/"m"/"yyyy'})[0][0].valueOf(), 1040688000000 + new Date("2002-12-24T00:00:00.000Z").getTimezoneOffset()*60000);
 	});
 });
 

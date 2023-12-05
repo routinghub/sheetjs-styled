@@ -25,40 +25,94 @@ var __toCommonJS = /* @__PURE__ */ ((cache) => {
 var dta_exports = {};
 __export(dta_exports, {
   parse: () => parse,
-  set_utils: () => set_utils
+  set_utils: () => set_utils,
+  version: () => version
 });
+var version = "0.0.1";
 var _utils;
 function set_utils(utils) {
   _utils = utils;
+}
+function u8_to_str(u8) {
+  return new TextDecoder().decode(u8);
+}
+function u8_to_latin1(u8) {
+  return new TextDecoder("latin1").decode(u8);
+}
+function format_number_dta(value, format, t) {
+  if (value < 0) {
+    const res = format_number_dta(-value, format, t);
+    res.w = "-" + res.w;
+    return res;
+  }
+  const o = { t: "n", v: value };
+  switch (t) {
+    case 251:
+    case 98:
+    case 65530:
+      format = "%8.0g";
+      break;
+    case 252:
+    case 105:
+    case 65529:
+      format = "%8.0g";
+      break;
+    case 253:
+    case 108:
+    case 65528:
+      format = "%12.0g";
+      break;
+    case 254:
+    case 102:
+    case 65527:
+      format = "%9.0g";
+      break;
+    case 255:
+    case 100:
+    case 65526:
+      format = "%10.0g";
+      break;
+    default:
+      throw t;
+  }
+  try {
+    let w = +(format.match(/%(\d+)/) || [])[1] || 8;
+    let k = 0;
+    if (value < 1)
+      ++k;
+    if (value < 0.1)
+      ++k;
+    if (value < 0.01)
+      ++k;
+    if (value < 1e-3)
+      ++k;
+    const e = value.toExponential();
+    const exp = e.indexOf("e") == -1 ? 0 : +e.slice(e.indexOf("e") + 1);
+    let h = w - 2 - exp;
+    if (h < 0)
+      h = 0;
+    var m = format.match(/%\d+\.(\d+)/);
+    if (m && +m[1])
+      h = +m[1];
+    o.w = (Math.round(value * 10 ** h) / 10 ** h).toFixed(h).replace(/^([-]?)0\./, "$1.");
+    o.w = o.w.slice(0, w + k);
+    if (o.w.indexOf(".") > -1)
+      o.w = o.w.replace(/0+$/, "");
+    o.w = o.w.replace(/\.$/, "");
+    if (o.w == "")
+      o.w = "0";
+  } catch (e) {
+  }
+  return o;
 }
 function u8_to_dataview(array) {
   return new DataView(array.buffer, array.byteOffset, array.byteLength);
 }
 function valid_inc(p, n) {
-  if (p.str.slice(p.ptr, p.ptr + n.length) != n)
+  if (u8_to_str(p.raw.slice(p.ptr, p.ptr + n.length)) != n)
     return false;
   p.ptr += n.length;
   return true;
-}
-function skip_end(p, n) {
-  const idx = p.str.indexOf(n, p.ptr);
-  if (idx == -1)
-    throw new Error(`Expected ${n} after offset ${p.ptr}`);
-  p.ptr = idx + n.length;
-}
-function slice_end(p, n) {
-  const idx = p.str.indexOf(n, p.ptr);
-  if (idx == -1)
-    throw new Error(`Expected ${n} after offset ${p.ptr}`);
-  const raw = p.raw.slice(p.ptr, idx);
-  const res = {
-    ptr: 0,
-    raw,
-    str: p.str.slice(p.ptr, idx),
-    dv: u8_to_dataview(raw)
-  };
-  p.ptr = idx + n.length;
-  return res;
 }
 function read_f64(p, LE) {
   p.ptr += 8;
@@ -98,15 +152,29 @@ function read_i8(p) {
 }
 var SUPPORTED_VERSIONS_TAGGED = [
   "117",
-  "118"
+  "118",
+  "119",
+  "120",
+  "121"
+];
+var SUPPORTED_VERSIONS_LEGACY = [
+  102,
+  103,
+  104,
+  105,
+  108,
+  110,
+  111,
+  112,
+  113,
+  114,
+  115
 ];
 function parse_tagged(raw) {
   const err = "Not a DTA file";
-  const str = new TextDecoder("latin1").decode(raw);
   const d = {
     ptr: 0,
     raw,
-    str,
     dv: u8_to_dataview(raw)
   };
   let vers = 118;
@@ -124,16 +192,22 @@ function parse_tagged(raw) {
     {
       if (!valid_inc(d, "<release>"))
         throw err;
-      const res = slice_end(d, "</release>");
-      if (SUPPORTED_VERSIONS_TAGGED.indexOf(res.str) == -1)
-        throw `Unsupported DTA ${res.str} file`;
-      vers = +res.str;
+      const res = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + 3));
+      d.ptr += 3;
+      if (!valid_inc(d, "</release>"))
+        throw err;
+      if (SUPPORTED_VERSIONS_TAGGED.indexOf(res) == -1)
+        throw `Unsupported DTA ${res} file`;
+      vers = +res;
     }
     {
       if (!valid_inc(d, "<byteorder>"))
         throw err;
-      const res = slice_end(d, "</byteorder>");
-      switch (res.str) {
+      const res = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + 3));
+      d.ptr += 3;
+      if (!valid_inc(d, "</byteorder>"))
+        throw err;
+      switch (res) {
         case "MSF":
           LE = false;
           break;
@@ -141,48 +215,49 @@ function parse_tagged(raw) {
           LE = true;
           break;
         default:
-          throw `Unsupported byteorder ${res.str}`;
+          throw `Unsupported byteorder ${res}`;
       }
     }
     {
       if (!valid_inc(d, "<K>"))
         throw err;
-      const res = slice_end(d, "</K>");
-      nvar = read_u16(res, LE);
+      nvar = vers === 119 || vers >= 121 ? read_u32(d, LE) : read_u16(d, LE);
+      if (!valid_inc(d, "</K>"))
+        throw err;
     }
     {
       if (!valid_inc(d, "<N>"))
         throw err;
-      const res = slice_end(d, "</N>");
       if (vers == 117)
-        nobs = nobs_lo = read_u32(res, LE);
+        nobs = nobs_lo = read_u32(d, LE);
       else {
-        const lo = read_u32(res, LE), hi = read_u32(res, LE);
+        const lo = read_u32(d, LE), hi = read_u32(d, LE);
         nobs = LE ? (nobs_lo = lo) + (nobs_hi = hi) * Math.pow(2, 32) : (nobs_lo = hi) + (nobs_hi = lo) * Math.pow(2, 32);
       }
       if (nobs > 1e6)
         console.error(`More than 1 million observations -- extra rows will be dropped`);
+      if (!valid_inc(d, "</N>"))
+        throw err;
     }
     {
       if (!valid_inc(d, "<label>"))
         throw err;
-      const res = slice_end(d, "</label>");
       const w = vers >= 118 ? 2 : 1;
-      const strlen = w == 1 ? read_u8(res) : read_u16(res, LE);
-      if (strlen + w != res.str.length)
-        throw `Expected string length ${strlen} but actual length was ${res.str.length - w}`;
+      const strlen = w == 1 ? read_u8(d) : read_u16(d, LE);
       if (strlen > 0)
-        label = new TextDecoder().decode(res.raw.slice(w));
+        label = u8_to_str(d.raw.slice(d.ptr, d.ptr + w));
+      d.ptr += strlen;
+      if (!valid_inc(d, "</label>"))
+        throw err;
     }
     {
       if (!valid_inc(d, "<timestamp>"))
         throw err;
-      const res = slice_end(d, "</timestamp>");
-      const strlen = read_u8(res);
-      if (strlen + 1 != res.str.length)
-        throw `Expected string length ${strlen} but actual length was ${res.str.length - 1}`;
-      if (strlen > 0)
-        timestamp = res.str.slice(1);
+      const strlen = read_u8(d);
+      timestamp = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + strlen));
+      d.ptr += strlen;
+      if (!valid_inc(d, "</timestamp>"))
+        throw err;
     }
     if (!valid_inc(d, "</header>"))
       throw err;
@@ -190,17 +265,16 @@ function parse_tagged(raw) {
   {
     if (!valid_inc(d, "<map>"))
       throw err;
-    skip_end(d, "</map>");
+    d.ptr += 8 * 14;
+    if (!valid_inc(d, "</map>"))
+      throw err;
   }
   let stride = 0;
   {
     if (!valid_inc(d, "<variable_types>"))
       throw err;
-    const res = slice_end(d, "</variable_types>");
-    if (res.raw.length != 2 * nvar)
-      throw `Expected variable_types length ${nvar * 2}, found ${res.raw.length}`;
-    while (res.ptr < res.raw.length) {
-      const type = read_u16(res, LE);
+    for (var i = 0; i < nvar; ++i) {
+      const type = read_u16(d, LE);
       var_types.push(type);
       if (type >= 1 && type <= 2045)
         stride += type;
@@ -208,6 +282,9 @@ function parse_tagged(raw) {
         switch (type) {
           case 32768:
             stride += 8;
+            break;
+          case 65525:
+            stride += 0;
             break;
           case 65526:
             stride += 8;
@@ -228,57 +305,62 @@ function parse_tagged(raw) {
             throw `Unsupported field type ${type}`;
         }
     }
+    if (!valid_inc(d, "</variable_types>"))
+      throw err;
   }
   {
     if (!valid_inc(d, "<varnames>"))
       throw err;
-    const res = slice_end(d, "</varnames>");
     const w = vers >= 118 ? 129 : 33;
-    if (res.raw.length != w * nvar)
-      throw `Expected variable_types length ${nvar * w}, found ${res.raw.length}`;
-    while (res.ptr < res.raw.length) {
-      const name = new TextDecoder().decode(res.raw.slice(res.ptr, res.ptr + w));
-      res.ptr += w;
+    for (let i2 = 0; i2 < nvar; ++i2) {
+      const name = u8_to_str(d.raw.slice(d.ptr, d.ptr + w));
+      d.ptr += w;
       var_names.push(name.replace(/\x00[\s\S]*/, ""));
     }
+    if (!valid_inc(d, "</varnames>"))
+      throw err;
   }
   {
     if (!valid_inc(d, "<sortlist>"))
       throw err;
-    const res = slice_end(d, "</sortlist>");
-    if (res.raw.length != 2 * nvar + 2)
-      throw `Expected sortlist length ${nvar * 2 + 2}, found ${res.raw.length}`;
+    d.ptr += (2 * nvar + 2) * (vers == 119 || vers == 121 ? 2 : 1);
+    if (!valid_inc(d, "</sortlist>"))
+      throw err;
   }
   {
     if (!valid_inc(d, "<formats>"))
       throw err;
-    const res = slice_end(d, "</formats>");
     const w = vers >= 118 ? 57 : 49;
-    if (res.raw.length != w * nvar)
-      throw `Expected formats length ${nvar * w}, found ${res.raw.length}`;
-    while (res.ptr < res.raw.length) {
-      const name = new TextDecoder().decode(res.raw.slice(res.ptr, res.ptr + w));
-      res.ptr += w;
+    for (let i2 = 0; i2 < nvar; ++i2) {
+      const name = u8_to_str(d.raw.slice(d.ptr, d.ptr + w));
+      d.ptr += w;
       formats.push(name.replace(/\x00[\s\S]*/, ""));
     }
+    if (!valid_inc(d, "</formats>"))
+      throw err;
   }
+  const value_label_names = [];
   {
     if (!valid_inc(d, "<value_label_names>"))
       throw err;
     const w = vers >= 118 ? 129 : 33;
-    const res = slice_end(d, "</value_label_names>");
+    for (let i2 = 0; i2 < nvar; ++i2, d.ptr += w)
+      value_label_names[i2] = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + w)).replace(/\x00.*$/, "");
+    if (!valid_inc(d, "</value_label_names>"))
+      throw err;
   }
   {
     if (!valid_inc(d, "<variable_labels>"))
       throw err;
     const w = vers >= 118 ? 321 : 81;
-    const res = slice_end(d, "</variable_labels>");
+    d.ptr += w * nvar;
+    if (!valid_inc(d, "</variable_labels>"))
+      throw err;
   }
   {
     if (!valid_inc(d, "<characteristics>"))
       throw err;
-    while (d.str.slice(d.ptr, d.ptr + 4) == "<ch>") {
-      d.ptr += 4;
+    while (valid_inc(d, "<ch>")) {
       const len = read_u32(d, LE);
       d.ptr += len;
       if (!valid_inc(d, "</ch>"))
@@ -297,26 +379,29 @@ function parse_tagged(raw) {
       for (let C = 0; C < nvar; ++C) {
         let t = var_types[C];
         if (t >= 1 && t <= 2045) {
-          let s = new TextDecoder().decode(d.raw.slice(d.ptr, d.ptr + t));
+          let s = u8_to_str(d.raw.slice(d.ptr, d.ptr + t));
           s = s.replace(/\x00[\s\S]*/, "");
           row[C] = s;
           d.ptr += t;
         } else
           switch (t) {
-            case 65526:
-              row[C] = read_f64(d, LE);
+            case 65525:
+              d.ptr += 0;
               break;
-            case 65527:
-              row[C] = read_f32(d, LE);
-              break;
-            case 65528:
-              row[C] = read_i32(d, LE);
+            case 65530:
+              row[C] = read_i8(d);
               break;
             case 65529:
               row[C] = read_i16(d, LE);
               break;
-            case 65530:
-              row[C] = read_i8(d);
+            case 65528:
+              row[C] = read_i32(d, LE);
+              break;
+            case 65527:
+              row[C] = read_f32(d, LE);
+              break;
+            case 65526:
+              row[C] = read_f64(d, LE);
               break;
             case 32768:
               {
@@ -328,6 +413,8 @@ function parse_tagged(raw) {
             default:
               throw `Unsupported field type ${t} for ${var_names[C]}`;
           }
+        if (typeof row[C] == "number" && formats[C])
+          row[C] = format_number_dta(row[C], formats[C], t);
       }
       _utils.sheet_add_aoa(ws, [row], { origin: -1, sheetStubs: true });
     }
@@ -355,15 +442,15 @@ function parse_tagged(raw) {
       const len = read_u32(d, LE);
       if (!strl_tbl[o])
         strl_tbl[o] = [];
-      let str2 = "";
+      let str = "";
       if (t == 129) {
-        str2 = new TextDecoder("latin1").decode(d.raw.slice(d.ptr, d.ptr + len));
+        str = new TextDecoder(vers >= 118 ? "utf8" : "latin1").decode(d.raw.slice(d.ptr, d.ptr + len));
         d.ptr += len;
       } else {
-        str2 = new TextDecoder("latin1").decode(d.raw.slice(d.ptr, d.ptr + len)).replace(/\x00$/, "");
+        str = new TextDecoder(vers >= 118 ? "utf8" : "latin1").decode(d.raw.slice(d.ptr, d.ptr + len)).replace(/\x00$/, "");
         d.ptr += len;
       }
-      strl_tbl[o][v] = str2;
+      strl_tbl[o][v] = str;
     }
     if (!valid_inc(d, "</strls>"))
       throw err;
@@ -397,9 +484,41 @@ function parse_tagged(raw) {
     });
   }
   {
+    const w = vers >= 118 ? 129 : 33;
     if (!valid_inc(d, "<value_labels>"))
       throw err;
-    const res = slice_end(d, "</value_labels>");
+    while (valid_inc(d, "<lbl>")) {
+      let len = read_u32(d, LE);
+      const labname = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + w)).replace(/\x00.*$/, "");
+      d.ptr += w;
+      d.ptr += 3;
+      const labels = [];
+      {
+        const n = read_u32(d, LE);
+        const txtlen = read_u32(d, LE);
+        const off = [], val = [];
+        for (let i2 = 0; i2 < n; ++i2)
+          off.push(read_u32(d, LE));
+        for (let i2 = 0; i2 < n; ++i2)
+          val.push(read_u32(d, LE));
+        const str = u8_to_str(d.raw.slice(d.ptr, d.ptr + txtlen));
+        d.ptr += txtlen;
+        for (let i2 = 0; i2 < n; ++i2)
+          labels[val[i2]] = str.slice(off[i2], str.indexOf("\0", off[i2]));
+      }
+      const C = value_label_names.indexOf(labname);
+      if (C == -1)
+        throw new Error(`unexpected value label |${labname}|`);
+      for (let R = 1; R < ws["!data"].length; ++R) {
+        const cell = ws["!data"][R][C];
+        cell.t = "s";
+        cell.v = cell.w = labels[cell.v || 0];
+      }
+      if (!valid_inc(d, "</lbl>"))
+        throw err;
+    }
+    if (!valid_inc(d, "</value_labels>"))
+      throw err;
   }
   if (!valid_inc(d, "</stata_dta>"))
     throw err;
@@ -409,27 +528,11 @@ function parse_tagged(raw) {
 }
 function parse_legacy(raw) {
   let vers = raw[0];
-  switch (vers) {
-    case 102:
-    case 112:
-      throw `Unsupported DTA ${vers} file`;
-    case 103:
-    case 104:
-    case 105:
-    case 108:
-    case 110:
-    case 111:
-    case 113:
-    case 114:
-    case 115:
-      break;
-    default:
-      throw new Error("Not a DTA file");
-  }
+  if (SUPPORTED_VERSIONS_LEGACY.indexOf(vers) == -1)
+    throw new Error("Not a DTA file");
   const d = {
     ptr: 1,
     raw,
-    str: "",
     dv: u8_to_dataview(raw)
   };
   let LE = true;
@@ -456,31 +559,34 @@ function parse_legacy(raw) {
     d.ptr++;
     nvar = read_u16(d, LE);
     nobs = read_u32(d, LE);
-    d.ptr += vers >= 108 ? 81 : 32;
+    d.ptr += vers >= 108 ? 81 : vers >= 103 ? 32 : 30;
     if (vers >= 105)
       d.ptr += 18;
   }
+  const value_label_names = [];
   {
     let C = 0;
     for (C = 0; C < nvar; ++C)
       var_types.push(read_u8(d));
     const w = vers >= 110 ? 33 : 9;
     for (C = 0; C < nvar; ++C) {
-      var_names.push(new TextDecoder().decode(d.raw.slice(d.ptr, d.ptr + w)).replace(/\x00[\s\S]*$/, ""));
+      var_names.push(u8_to_str(d.raw.slice(d.ptr, d.ptr + w)).replace(/\x00[\s\S]*$/, ""));
       d.ptr += w;
     }
     d.ptr += 2 * (nvar + 1);
     const fw = vers >= 114 ? 49 : vers >= 105 ? 12 : 7;
     for (C = 0; C < nvar; ++C) {
-      formats.push(new TextDecoder().decode(d.raw.slice(d.ptr, d.ptr + fw)).replace(/\x00[\s\S]*$/, ""));
+      formats.push(u8_to_str(d.raw.slice(d.ptr, d.ptr + fw)).replace(/\x00[\s\S]*$/, ""));
       d.ptr += fw;
     }
-    d.ptr += (vers >= 110 ? 33 : 9) * nvar;
+    const lw = vers >= 110 ? 33 : 9;
+    for (let i = 0; i < nvar; ++i, d.ptr += lw)
+      value_label_names[i] = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + lw)).replace(/\x00.*$/, "");
   }
   d.ptr += (vers >= 106 ? 81 : 32) * nvar;
   if (vers >= 105)
     while (d.ptr < d.raw.length) {
-      const dt = read_u8(d), len = (vers >= 111 ? read_u32 : read_u16)(d, LE);
+      const dt = read_u8(d), len = (vers >= 110 ? read_u32 : read_u16)(d, LE);
       if (dt == 0 && len == 0)
         break;
       d.ptr += len;
@@ -490,11 +596,16 @@ function parse_legacy(raw) {
     const row = [];
     for (let C = 0; C < nvar; ++C) {
       let t = var_types[C];
-      if (vers >= 111 && t >= 1 && t <= 244) {
-        let s = new TextDecoder().decode(d.raw.slice(d.ptr, d.ptr + t));
+      if ((vers == 111 || vers >= 113) && t >= 1 && t <= 244) {
+        let s = u8_to_str(d.raw.slice(d.ptr, d.ptr + t));
         s = s.replace(/\x00[\s\S]*/, "");
         row[C] = s;
         d.ptr += t;
+      } else if ((vers == 112 || vers <= 110) && t >= 128) {
+        let s = u8_to_str(d.raw.slice(d.ptr, d.ptr + t - 127));
+        s = s.replace(/\x00[\s\S]*/, "");
+        row[C] = s;
+        d.ptr += t - 127;
       } else
         switch (t) {
           case 251:
@@ -520,9 +631,41 @@ function parse_legacy(raw) {
           default:
             throw `Unsupported field type ${t} for ${var_names[C]}`;
         }
+      if (typeof row[C] == "number" && formats[C])
+        row[C] = format_number_dta(row[C], formats[C], t);
     }
     _utils.sheet_add_aoa(ws, [row], { origin: -1, sheetStubs: true });
   }
+  if (vers >= 115)
+    while (d.ptr < d.raw.length) {
+      const w = 33;
+      let len = read_u32(d, LE);
+      const labname = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + w)).replace(/\x00.*$/, "");
+      d.ptr += w;
+      d.ptr += 3;
+      const labels = [];
+      {
+        const n = read_u32(d, LE);
+        const txtlen = read_u32(d, LE);
+        const off = [], val = [];
+        for (let i = 0; i < n; ++i)
+          off.push(read_u32(d, LE));
+        for (let i = 0; i < n; ++i)
+          val.push(read_u32(d, LE));
+        const str = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + txtlen));
+        d.ptr += txtlen;
+        for (let i = 0; i < n; ++i)
+          labels[val[i]] = str.slice(off[i], str.indexOf("\0", off[i]));
+      }
+      const C = value_label_names.indexOf(labname);
+      if (C == -1)
+        throw new Error(`unexpected value label |${labname}|`);
+      for (let R = 1; R < ws["!data"].length; ++R) {
+        const cell = ws["!data"][R][C];
+        cell.t = "s";
+        cell.v = cell.w = labels[cell.v || 0];
+      }
+    }
   const wb = _utils.book_new();
   _utils.book_append_sheet(wb, ws, "Sheet1");
   return wb;
@@ -538,5 +681,6 @@ module.exports = __toCommonJS(dta_exports);
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   parse,
-  set_utils
+  set_utils,
+  version
 });

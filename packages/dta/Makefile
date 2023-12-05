@@ -1,5 +1,15 @@
 .PHONY: build
-build: node browser
+build: node browser types
+
+.PHONY: clean
+clean:
+	rm dist/dta.*
+
+## Types
+.PHONY: types
+types: dta.ts
+	tsc -d --emitDeclarationOnly --declarationDir types $<
+	mv types/dta.d.ts types/index.d.ts
 
 ## NodeJS target
 

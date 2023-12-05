@@ -1,17 +1,5 @@
-function normalize_xl_unsafe(v/*:number*/)/*:number*/ {
-	var s = v.toPrecision(16);
-	if(s.indexOf("e") > -1) {
-		var m = s.slice(0, s.indexOf("e"));
-		m = m.indexOf(".") > -1 ? m.slice(0, (m.slice(0,2) == "0." ? 17 : 16)) : (m.slice(0,15) + fill("0", m.length - 15));
-		return m + s.slice(s.indexOf("e"));
-	}
-	var n = s.indexOf(".") > -1 ? s.slice(0, (s.slice(0,2) == "0." ? 17 : 16)) : (s.slice(0,15) + fill("0", s.length - 15));
-	return Number(n);
-}
-
 function parse_date_code(v/*:number*/,opts/*:?any*/,b2/*:?boolean*/) {
 	if(v > 2958465 || v < 0) return null;
-	v = normalize_xl_unsafe(v);
 	var date = (v|0), time = Math.floor(86400 * (v - date)), dow=0;
 	var dout=[];
 	var out={D:date, T:time, u:86400*(v-date)-time,y:0,m:0,d:0,H:0,M:0,S:0,q:0};

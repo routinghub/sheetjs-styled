@@ -67,10 +67,9 @@ clean-data:
 
 .PHONY: init
 init: ## Initial setup for development
-	git submodule init
-	git submodule update
-	#git submodule foreach git pull origin master
-	git submodule foreach make all
+	rm -rf test_files
+	if [ ! -e test_files.zip ]; then curl -LO https://test-files.sheetjs.com/test_files.zip; fi
+	unzip test_files.zip
 	mkdir -p tmp
 
 DISTHDR=misc/suppress_export.js

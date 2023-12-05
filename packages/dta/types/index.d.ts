@@ -1,5 +1,6 @@
-import type { WorkBook } from "xlsx";
-
+import { WorkBook } from 'xlsx';
+export { parse, set_utils, version };
+declare const version = "0.0.1";
 /** Set internal instance of `utils`
  *
  * Usage:
@@ -12,12 +13,11 @@ import type { WorkBook } from "xlsx";
  *
  * @param utils utils object
  */
-export function set_utils(utils: any): void;
-
+declare function set_utils(utils: any): void;
 /** Parse DTA file
  *
  * NOTE: In NodeJS, `Buffer` extends `Uint8Array`
  *
  * @param {Uint8Array} data File data
  */
-export function parse(data: Uint8Array): WorkBook
+declare function parse(data: Uint8Array): WorkBook;

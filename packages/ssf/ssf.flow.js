@@ -141,6 +141,26 @@ var default_str = {
 	44: '_("$"* #,##0.00_);_("$"* \\(#,##0.00\\);_("$"* "-"??_);_(@_)'
 };
 
+function normalize_xl_unsafe(v/*:number*/)/*:number*/ {
+	if(v == 0) return 0;
+	var s = v.toPrecision(17);
+	if(s.indexOf("e") > -1) {
+		var m = s.slice(0, s.indexOf("e"));
+		if(m.indexOf(".") > -1) {
+			var tail = m.charAt(0) + m.slice(2, 17);
+			m = m.slice(0, 16);
+			if(tail.length == 16) {
+				m = String(Math.round(Number(tail.slice(0,15) + "." + tail.slice(15))));
+				if(m.length == 16) m = m.slice(0,2) + "." + m.slice(2);
+				else m = m.charAt(0) + "." + m.slice(1);
+			}
+		}
+		else m = m.slice(0,15) + fill("0", m.length - 15);
+		return Number(m + s.slice(s.indexOf("e")));
+	}
+	var n = s.indexOf(".") > -1 ? s.slice(0, (s.slice(0,2) == "0." ? 17 : 16)) : (s.slice(0,15) + fill("0", s.length - 15));
+	return Number(n);
+}
 function frac(x/*:number*/, D/*:number*/, mixed/*:?boolean*/)/*:Array<number>*/ {
 	var sgn = x < 0 ? -1 : 1;
 	var B = x * sgn;
@@ -161,20 +181,8 @@ function frac(x/*:number*/, D/*:number*/, mixed/*:?boolean*/)/*:Array<number>*/ 
 	var q = Math.floor(sgn * P/Q);
 	return [q, sgn*P - q*Q, Q];
 }
-function normalize_xl_unsafe(v/*:number*/)/*:number*/ {
-	var s = v.toPrecision(16);
-	if(s.indexOf("e") > -1) {
-		var m = s.slice(0, s.indexOf("e"));
-		m = m.indexOf(".") > -1 ? m.slice(0, (m.slice(0,2) == "0." ? 17 : 16)) : (m.slice(0,15) + fill("0", m.length - 15));
-		return m + s.slice(s.indexOf("e"));
-	}
-	var n = s.indexOf(".") > -1 ? s.slice(0, (s.slice(0,2) == "0." ? 17 : 16)) : (s.slice(0,15) + fill("0", s.length - 15));
-	return Number(n);
-}
-
 function parse_date_code(v/*:number*/,opts/*:?any*/,b2/*:?boolean*/) {
 	if(v > 2958465 || v < 0) return null;
-	v = normalize_xl_unsafe(v);
 	var date = (v|0), time = Math.floor(86400 * (v - date)), dow=0;
 	var dout=[];
 	var out={D:date, T:time, u:86400*(v-date)-time,y:0,m:0,d:0,H:0,M:0,S:0,q:0};
@@ -703,6 +711,7 @@ function fmt_is_date(fmt/*:string*/)/*:boolean*/ {
 }
 SSF.is_date = fmt_is_date;
 function eval_fmt(fmt/*:string*/, v/*:any*/, opts/*:any*/, flen/*:number*/) {
+	if(typeof v == "number") v = normalize_xl_unsafe(v);
 	var out = [], o = "", i = 0, c = "", lst='t', dt, j, cc;
 	var hr='H';
 	/* Tokenize */

@@ -1,6 +1,6 @@
 {
 	"name": "xlsx",
-	"version": "0.20.0+csv",
+	"version": "0.20.1",
 	"author": "sheetjs",
 	"description": "SheetJS Spreadsheet data parser and writer",
 	"keywords": [
@@ -167,6 +167,12 @@
 		]
 	},
 	"homepage": "https://sheetjs.com/",
+	"files": [
+		"CHANGELOG.md", "LICENSE", "README.md", "bower.json", "package.json", "xlsx.js", "xlsx.mjs", "xlsxworker.js",
+		"bin/xlsx.njs",
+		"dist/LICENSE", "dist/*.mjs", "dist/*.js", "dist/*.map", "dist/*.d.ts",
+		"types/index.d.ts", "types/tsconfig.json"
+	],
 	"bugs": {
 		"url": "https://git.sheetjs.com/SheetJS/sheetjs/issues"
 	},

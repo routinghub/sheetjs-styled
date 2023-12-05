@@ -1,5 +1,7 @@
-import { DenseWorkSheet, WorkBook, type utils } from 'xlsx';
-export { parse, set_utils };
+import { CellObject, DenseWorkSheet, WorkBook, type utils } from 'xlsx';
+export { parse, set_utils, version };
+
+const version = "0.0.1";
 
 let _utils: typeof utils;
 /** Set internal instance of `utils`
@@ -18,6 +20,51 @@ function set_utils(utils: any): void {
   _utils = utils;
 }
 
+function u8_to_str(u8: Uint8Array): string {
+  return new TextDecoder().decode(u8);
+}
+
+/* sadly the web zealots decided to abandon binary strings */
+function u8_to_latin1(u8: Uint8Array): string {
+  return new TextDecoder("latin1").decode(u8);
+}
+
+
+/* TODO: generalize and map to SSF */
+function format_number_dta(value: number, format: string, t: number): CellObject {
+  if(value < 0) { const res = format_number_dta(-value, format, t); res.w = "-" + res.w; return res; }
+  const o: CellObject = { t: "n", v: value };
+  /* NOTE: The Stata CSV exporter appears to ignore the column formats, instead using these defaults */
+  switch(t) {
+    case 251: case 0x62: case 65530: format = "%8.0g"; break; // byte
+    case 252: case 0x69: case 65529: format = "%8.0g"; break; // int
+    case 253: case 0x6c: case 65528: format = "%12.0g"; break; // long
+    case 254: case 0x66: case 65527: format = "%9.0g"; break; // float
+    case 255: case 0x64: case 65526: format = "%10.0g"; break; // double
+    default: throw t;
+  }
+  try {
+    let w = +((format.match(/%(\d+)/)||[])[1]) || 8;
+    let k = 0;
+    if(value < 1) ++k;
+    if(value < 0.1) ++k;
+    if(value < 0.01) ++k;
+    if(value < 0.001) ++k;
+    const e = value.toExponential();
+    const exp = e.indexOf("e") == -1 ? 0 : +e.slice(e.indexOf("e")+1);
+    let h = w - 2 - exp;
+    if(h < 0) h = 0;
+    var m = format.match(/%\d+\.(\d+)/);
+    if(m && +m[1]) h = +m[1];
+    o.w = (Math.round(value * 10**(h))/10**(h)).toFixed(h).replace(/^([-]?)0\./,"$1.");
+    o.w = o.w.slice(0, w + k);
+    if(o.w.indexOf(".") > -1) o.w = o.w.replace(/0+$/,"");
+    o.w = o.w.replace(/\.$/,"");
+    if(o.w == "") o.w = "0";
+  } catch(e) {}
+  return o;
+}
+
 interface Payload {
   /** Offset */
   ptr: number;
@@ -25,37 +72,15 @@ interface Payload {
   /** Raw data */
   raw: Uint8Array;
 
-  /** Latin-1 encoded */
-  str: string;
-
   /** DataView */
   dv: DataView;
 }
 
 function u8_to_dataview(array: Uint8Array): DataView { return new DataView(array.buffer, array.byteOffset, array.byteLength); }
 function valid_inc(p: Payload, n: string): boolean {
-  if(p.str.slice(p.ptr, p.ptr + n.length) != n) return false;
+  if(u8_to_str(p.raw.slice(p.ptr, p.ptr + n.length)) != n) return false;
   p.ptr += n.length;
   return true;
-}
-
-function skip_end(p: Payload, n: string): void {
-  const idx = p.str.indexOf(n, p.ptr);
-  if(idx == -1) throw new Error(`Expected ${n} after offset ${p.ptr}`);
-  p.ptr = idx + n.length;
-}
-function slice_end(p: Payload, n: string): Payload {
-  const idx = p.str.indexOf(n, p.ptr);
-  if(idx == -1) throw new Error(`Expected ${n} after offset ${p.ptr}`);
-  const raw = p.raw.slice(p.ptr, idx);
-  const res = {
-    ptr: 0,
-    raw,
-    str: p.str.slice(p.ptr, idx),
-    dv: u8_to_dataview(raw)
-  };
-  p.ptr = idx + n.length;
-  return res;
 }
 
 function read_f64(p: Payload, LE: boolean): number | null {
@@ -96,23 +121,34 @@ function read_i8(p: Payload): number | null {
   return u > 100 ? null : u;
 }
 
+/* the annotations are from `dtaversion` */
 const SUPPORTED_VERSIONS_TAGGED = [
   "117", // stata 13
   "118", // stata 14-18
-  // "119", // stata 15/16/17/18 (> 32767 variables)
-  // "120", // stata 18 (<= 32767, with aliases)
-  // "121", // stata 18 (> 32767, with aliases)
+  "119", // stata 15-18 (> 32767 variables)
+  "120", // stata 18 (<= 32767, with aliases)
+  "121", // stata 18 (> 32767, with aliases)
+];
+const SUPPORTED_VERSIONS_LEGACY = [
+  102, // stata 1
+  103, // stata 2/3
+  104, // stata 4
+  105, // stata 5
+  108, // stata 6
+  110, // stata 7
+  111, // stata 7
+  112, // stata 8/9
+  113, // stata 8/9
+  114, // stata 10/11
+  115, // stata 12
 ];
 
 function parse_tagged(raw: Uint8Array): WorkBook {
   const err = ("Not a DTA file");
-  /* sadly the web zealots decided to abandon binary strings */
-  const str = new TextDecoder('latin1').decode(raw);
 
   const d: Payload = {
     ptr: 0,
     raw,
-    str,
     dv: u8_to_dataview(raw)
   }
 
@@ -134,58 +170,64 @@ function parse_tagged(raw: Uint8Array): WorkBook {
     /* <release> */
     {
       if(!valid_inc(d, "<release>")) throw err;
-      const res = slice_end(d, "</release>");
-      if(SUPPORTED_VERSIONS_TAGGED.indexOf(res.str) == -1) throw (`Unsupported DTA ${res.str} file`);
-      vers = +res.str;
+      /* NOTE: this assumes the version is 3 characters wide */
+      const res = u8_to_latin1(d.raw.slice(d.ptr, d.ptr+3));
+      d.ptr += 3;
+      if(!valid_inc(d, "</release>")) throw err;
+      if(SUPPORTED_VERSIONS_TAGGED.indexOf(res) == -1) throw (`Unsupported DTA ${res} file`);
+      vers = +res;
     }
 
     /* <byteorder> */
     {
       if(!valid_inc(d, "<byteorder>")) throw err;
-      const res = slice_end(d, "</byteorder>");
-      switch(res.str) {
+      /* NOTE: this assumes the byte order is 3 characters wide */
+      const res = u8_to_latin1(d.raw.slice(d.ptr, d.ptr+3));
+      d.ptr += 3;
+      if(!valid_inc(d, "</byteorder>")) throw err;
+      switch(res) {
         case "MSF": LE = false; break;
         case "LSF": LE = true; break;
-        default: throw (`Unsupported byteorder ${res.str}`);
+        default: throw (`Unsupported byteorder ${res}`);
       }
     }
 
     /* <K> */
     {
       if(!valid_inc(d, "<K>")) throw err;
-      const res = slice_end(d, "</K>");
-      nvar = read_u16(res, LE);
+      nvar = (vers === 119 || vers >= 121) ? read_u32(d, LE) : read_u16(d, LE);
+      if(!valid_inc(d, "</K>")) throw err;
     }
 
     /* <N> */
     {
       if(!valid_inc(d, "<N>")) throw err;
-      const res = slice_end(d, "</N>");
-      if(vers == 117) nobs = nobs_lo = read_u32(res, LE);
+      if(vers == 117) nobs = nobs_lo = read_u32(d, LE);
       else {
-        const lo = read_u32(res, LE), hi = read_u32(res, LE);
+        const lo = read_u32(d, LE), hi = read_u32(d, LE);
         nobs = LE ? ((nobs_lo = lo) + (nobs_hi = hi) * Math.pow(2,32)) : ((nobs_lo = hi) + (nobs_hi = lo) * Math.pow(2,32));
       }
       if(nobs > 1e6) console.error(`More than 1 million observations -- extra rows will be dropped`);
+      if(!valid_inc(d, "</N>")) throw err;
     }
 
     /* <label> */
     {
       if(!valid_inc(d, "<label>")) throw err;
-      const res = slice_end(d, "</label>");
       const w = vers >= 118 ? 2 : 1;
-      const strlen = w == 1 ? read_u8(res) : read_u16(res, LE);
-      if(strlen + w != res.str.length) throw (`Expected string length ${strlen} but actual length was ${res.str.length - w}`);
-      if(strlen > 0) label = new TextDecoder().decode(res.raw.slice(w));
+      const strlen = w == 1 ? read_u8(d) : read_u16(d, LE);
+      if(strlen > 0) label = u8_to_str(d.raw.slice(d.ptr, d.ptr + w));
+      d.ptr += strlen;
+      if(!valid_inc(d, "</label>")) throw err;
     }
 
     /* <timestamp> */
     {
       if(!valid_inc(d, "<timestamp>")) throw err;
-      const res = slice_end(d, "</timestamp>");
-      const strlen = read_u8(res);
-      if(strlen + 1 != res.str.length) throw (`Expected string length ${strlen} but actual length was ${res.str.length - 1}`);
-      if(strlen > 0) timestamp = res.str.slice(1);
+      const strlen = read_u8(d);
+      timestamp = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + strlen));
+      d.ptr += strlen;
+      if(!valid_inc(d, "</timestamp>")) throw err;
     }
 
     if(!valid_inc(d, "</header>")) throw err;
@@ -211,21 +253,21 @@ function parse_tagged(raw: Uint8Array): WorkBook {
       </stata_data>
       EOF
     */
-    skip_end(d, "</map>");
+    d.ptr += 8 * 14;
+    if(!valid_inc(d, "</map>")) throw err;
   }
 
   let stride = 0;
   /* 5.3 Variable types <variable_types> */
   {
     if(!valid_inc(d, "<variable_types>")) throw err;
-    const res = slice_end(d, "</variable_types>");
-    if(res.raw.length != 2 * nvar) throw (`Expected variable_types length ${nvar * 2}, found ${res.raw.length}`);
-    while(res.ptr < res.raw.length) {
-      const type = read_u16(res, LE);
+    for(var i = 0; i < nvar; ++i) {
+      const type = read_u16(d, LE);
       var_types.push(type);
       if(type >= 1 && type <= 2045) stride += type;
       else switch(type) {
         case 32768: stride += 8; break;
+        case 65525: stride += 0; break; // alias
         case 65526: stride += 8; break;
         case 65527: stride += 4; break;
         case 65528: stride += 4; break;
@@ -234,61 +276,62 @@ function parse_tagged(raw: Uint8Array): WorkBook {
         default: throw (`Unsupported field type ${type}`);
       }
     }
+    if(!valid_inc(d, "</variable_types>")) throw err;
   }
 
   /* 5.4 Variable names <varnames> */
   {
     if(!valid_inc(d, "<varnames>")) throw err;
-    const res = slice_end(d, "</varnames>");
     const w = vers >= 118 ? 129 : 33;
-    if(res.raw.length != w * nvar) throw (`Expected variable_types length ${nvar * w}, found ${res.raw.length}`);
-    while(res.ptr < res.raw.length) {
-      const name = new TextDecoder().decode(res.raw.slice(res.ptr, res.ptr + w));
-      res.ptr += w;
+    for(let i = 0; i < nvar; ++i) {
+      const name = u8_to_str(d.raw.slice(d.ptr, d.ptr + w));
+      d.ptr += w;
       var_names.push(name.replace(/\x00[\s\S]*/,""));
     }
+    if(!valid_inc(d, "</varnames>")) throw err;
   }
 
   /* 5.5 Sort order of observations <sortlist> */
   {
     /* TODO: check sort list? */
     if(!valid_inc(d, "<sortlist>")) throw err;
-    const res = slice_end(d, "</sortlist>");
-    if(res.raw.length != 2 * nvar + 2) throw (`Expected sortlist length ${nvar * 2 + 2}, found ${res.raw.length}`);
+    d.ptr += (2 * nvar + 2) * ((vers == 119 || vers == 121) ? 2 : 1);
+    if(!valid_inc(d, "</sortlist>")) throw err;
   }
 
   /* 5.6 Display formats <formats> */
   {
     if(!valid_inc(d, "<formats>")) throw err;
-    const res = slice_end(d, "</formats>");
     const w = vers >= 118 ? 57 : 49;
-    if(res.raw.length != w * nvar) throw (`Expected formats length ${nvar * w}, found ${res.raw.length}`);
-    while(res.ptr < res.raw.length) {
-      const name = new TextDecoder().decode(res.raw.slice(res.ptr, res.ptr + w));
-      res.ptr += w;
+    for(let i = 0; i < nvar; ++i) {
+      const name = u8_to_str(d.raw.slice(d.ptr, d.ptr + w));
+      d.ptr += w;
       formats.push(name.replace(/\x00[\s\S]*/,""));
     }
+    if(!valid_inc(d, "</formats>")) throw err;
   }
 
+  const value_label_names: string[] = [];
   /* TODO: <value_label_names> */
   {
     if(!valid_inc(d, "<value_label_names>")) throw err;
     const w = vers >= 118 ? 129 : 33;
-    const res = slice_end(d, "</value_label_names>");
+    for(let i = 0; i < nvar; ++i, d.ptr += w) value_label_names[i] = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + w)).replace(/\x00.*$/,"");
+    if(!valid_inc(d, "</value_label_names>")) throw err;
   }
 
   /* TODO: <variable_labels> */
   {
     if(!valid_inc(d, "<variable_labels>")) throw err;
     const w = vers >= 118 ? 321 : 81;
-    const res = slice_end(d, "</variable_labels>");
+    d.ptr += w * nvar;
+    if(!valid_inc(d, "</variable_labels>")) throw err;
   }
 
   /* 5.9 Characteristics <characteristics> */
   {
     if(!valid_inc(d, "<characteristics>")) throw err;
-    while(d.str.slice(d.ptr, d.ptr + 4) == "<ch>") {
-      d.ptr += 4;
+    while(valid_inc(d, "<ch>")) {
       const len = read_u32(d, LE);
       d.ptr += len;
       if(!valid_inc(d, "</ch>")) throw err;
@@ -296,7 +339,7 @@ function parse_tagged(raw: Uint8Array): WorkBook {
     if(!valid_inc(d, "</characteristics>")) throw err;
   }
 
-  const ws: DenseWorkSheet = (_utils.aoa_to_sheet([var_names], {dense: true}) as DenseWorkSheet);
+  const ws: DenseWorkSheet = (_utils.aoa_to_sheet([var_names], {dense: true} as any) as DenseWorkSheet);
 
   var ptrs: Array<[number, number, Uint8Array]> = []
   /* 5.10 Data <data> */
@@ -309,16 +352,17 @@ function parse_tagged(raw: Uint8Array): WorkBook {
         // TODO: formats, dta_12{0,1} aliases?
         if(t >= 1 && t <= 2045) {
           /* NOTE: dta_117 restricts strf to ASCII */
-          let s = new TextDecoder().decode(d.raw.slice(d.ptr, d.ptr + t));
+          let s = u8_to_str(d.raw.slice(d.ptr, d.ptr + t));
           s = s.replace(/\x00[\s\S]*/,"");
           row[C] = s;
           d.ptr += t;
         } else switch(t) {
-          case 65526: row[C] = read_f64(d, LE); break;
-          case 65527: row[C] = read_f32(d, LE); break;
-          case 65528: row[C] = read_i32(d, LE); break;
-          case 65529: row[C] = read_i16(d, LE); break;
-          case 65530: row[C] = read_i8(d); break;
+          case 65525: d.ptr += 0; break; // alias
+          case 65530: row[C] = read_i8(d); break; // byte
+          case 65529: row[C] = read_i16(d, LE); break; // int
+          case 65528: row[C] = read_i32(d, LE); break; // long
+          case 65527: row[C] = read_f32(d, LE); break; // float
+          case 65526: row[C] = read_f64(d, LE); break; // double
           case 32768: {
             row[C] = "##SheetJStrL##";
             ptrs.push([R+1,C, d.raw.slice(d.ptr, d.ptr + 8)]);
@@ -326,6 +370,7 @@ function parse_tagged(raw: Uint8Array): WorkBook {
           } break;
           default: throw (`Unsupported field type ${t} for ${var_names[C]}`);
         }
+        if(typeof row[C] == "number" && formats[C]) row[C] = format_number_dta(row[C], formats[C], t);
       }
       _utils.sheet_add_aoa(ws, [row], {origin: -1, sheetStubs: true});
     }
@@ -352,11 +397,11 @@ function parse_tagged(raw: Uint8Array): WorkBook {
       if(!strl_tbl[o]) strl_tbl[o] = [];
       let str = "";
       if(t == 129) {
-        // TODO: codepage
-        str = new TextDecoder("latin1").decode(d.raw.slice(d.ptr, d.ptr + len));
+        // TODO: dta_117 codepage
+        str = new TextDecoder(vers >= 118 ? "utf8" : "latin1").decode(d.raw.slice(d.ptr, d.ptr + len));
         d.ptr += len;
       } else {
-        str = new TextDecoder("latin1").decode(d.raw.slice(d.ptr, d.ptr + len)).replace(/\x00$/,"");
+        str = new TextDecoder(vers >= 118 ? "utf8" : "latin1").decode(d.raw.slice(d.ptr, d.ptr + len)).replace(/\x00$/,"");
         d.ptr += len;
       }
       strl_tbl[o][v] = str;
@@ -391,12 +436,37 @@ function parse_tagged(raw: Uint8Array): WorkBook {
 
   /* 5.12 Value labels <value_labels> */
   {
+    const w = vers >= 118 ? 129 : 33;
     if(!valid_inc(d, "<value_labels>")) throw err;
-    const res = slice_end(d, "</value_labels>");
+    while(valid_inc(d, "<lbl>")) {
+      let len = read_u32(d, LE);
+      const labname = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + w)).replace(/\x00.*$/,"");
+      d.ptr += w;
+      d.ptr += 3; // padding
+      const labels: string[] = [];
+      {
+        const n = read_u32(d, LE);
+        const txtlen = read_u32(d, LE);
+        const off: number[] = [], val: number[] = [];
+        for(let i = 0; i < n; ++i) off.push(read_u32(d, LE));
+        for(let i = 0; i < n; ++i) val.push(read_u32(d, LE));
+        const str = u8_to_str(d.raw.slice(d.ptr, d.ptr + txtlen));
+        d.ptr += txtlen;
+        for(let i = 0; i < n; ++i) labels[val[i]] = str.slice(off[i], str.indexOf("\x00", off[i]));
+      }
+      const C = value_label_names.indexOf(labname);
+      if(C == -1) throw new Error(`unexpected value label |${labname}|`);
+      for(let R = 1; R < ws["!data"].length; ++R) {
+        const cell = ws["!data"][R][C];
+        cell.t = "s"; cell.v = cell.w = labels[(cell.v as number)||0];
+      }
+      //d.ptr += len; // value_label_table
+      if(!valid_inc(d, "</lbl>")) throw err;
+    }
+    if(!valid_inc(d, "</value_labels>")) throw err;
   }
 
   if(!valid_inc(d, "</stata_dta>")) throw err;
-
   const wb = _utils.book_new();
   _utils.book_append_sheet(wb, ws, "Sheet1");
   return wb;
@@ -404,29 +474,11 @@ function parse_tagged(raw: Uint8Array): WorkBook {
 
 function parse_legacy(raw: Uint8Array): WorkBook {
   let vers: number = raw[0];
-  switch(vers) {
-    case 102: // stata 1
-    case 112: // stata 8/9
-      throw (`Unsupported DTA ${vers} file`);
-
-    case 103: // stata 2/3
-    case 104: // stata 4
-    case 105: // stata 5
-    case 108: // stata 6
-    case 110: // stata 7
-    case 111: // stata 7
-    case 113: // stata 8/9
-    case 114: // stata 10/11
-    case 115: // stata 12
-      break;
-
-    default: throw new Error("Not a DTA file");
-  }
+  if(SUPPORTED_VERSIONS_LEGACY.indexOf(vers) == -1) throw new Error("Not a DTA file");
 
   const d: Payload = {
     ptr: 1,
     raw,
-    str:"",
     dv: u8_to_dataview(raw)
   }
 
@@ -453,11 +505,12 @@ function parse_legacy(raw: Uint8Array): WorkBook {
     d.ptr++; // "unused"
     nvar = read_u16(d, LE);
     nobs = read_u32(d, LE);
-    d.ptr += (vers >= 108 ? 81 : 32); // TODO: data_label
+    d.ptr += (vers >= 108 ? 81 : vers >= 103 ? 32 : 30); // TODO: data_label
     if(vers >= 105) d.ptr += 18; // TODO: time_stamp
   }
 
   /* 5.2 Descriptors */
+  const value_label_names: string[] = [];
   {
     let C = 0;
 
@@ -467,7 +520,7 @@ function parse_legacy(raw: Uint8Array): WorkBook {
     // varlist
     const w = vers >= 110 ? 33 : 9;
     for(C = 0; C < nvar; ++C) {
-      var_names.push(new TextDecoder().decode(d.raw.slice(d.ptr, d.ptr + w)).replace(/\x00[\s\S]*$/,""));
+      var_names.push(u8_to_str(d.raw.slice(d.ptr, d.ptr + w)).replace(/\x00[\s\S]*$/,""));
       d.ptr += w;
     }
 
@@ -477,12 +530,12 @@ function parse_legacy(raw: Uint8Array): WorkBook {
     // fmtlist
     const fw = (vers >= 114 ? 49 : vers >= 105 ? 12 : 7);
     for(C = 0; C < nvar; ++C) {
-      formats.push(new TextDecoder().decode(d.raw.slice(d.ptr, d.ptr + fw)).replace(/\x00[\s\S]*$/,""));
+      formats.push(u8_to_str(d.raw.slice(d.ptr, d.ptr + fw)).replace(/\x00[\s\S]*$/,""));
       d.ptr += fw;
     }
-
     // lbllist
-    d.ptr += (vers >= 110 ? 33 : 9) * nvar;
+    const lw = vers >= 110 ? 33 : 9;
+    for(let i = 0; i < nvar; ++i, d.ptr += lw) value_label_names[i] = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + lw)).replace(/\x00.*$/,"");
   }
 
   /* 5.3 Variable labels */
@@ -491,12 +544,12 @@ function parse_legacy(raw: Uint8Array): WorkBook {
 
   /* 5.4 Expansion fields */
   if(vers >= 105) while(d.ptr < d.raw.length) {
-    const dt = read_u8(d), len = (vers >= 111 ? read_u32 : read_u16)(d, LE);
+    const dt = read_u8(d), len = (vers >= 110 ? read_u32 : read_u16)(d, LE);
     if(dt == 0 && len == 0) break;
     d.ptr += len;
   }
 
-  const ws: DenseWorkSheet = (_utils.aoa_to_sheet([var_names], {dense: true}) as DenseWorkSheet);
+  const ws: DenseWorkSheet = (_utils.aoa_to_sheet([var_names], {dense: true} as any) as DenseWorkSheet);
 
   /* 5.5 Data */
   for(let R = 0; R < nobs; ++R) {
@@ -504,12 +557,18 @@ function parse_legacy(raw: Uint8Array): WorkBook {
     for(let C = 0; C < nvar; ++C) {
       let t = var_types[C];
       // TODO: data type processing
-      if(vers >= 111 && t >= 1 && t <= 244) {
+      if((vers == 111 || vers >= 113) && t >= 1 && t <= 244) {
         /* NOTE: dta_117 restricts strf to ASCII */
-        let s = new TextDecoder().decode(d.raw.slice(d.ptr, d.ptr + t));
+        let s = u8_to_str(d.raw.slice(d.ptr, d.ptr + t));
         s = s.replace(/\x00[\s\S]*/,"");
         row[C] = s;
         d.ptr += t;
+      } else if((vers == 112 || vers <= 110) && t >= 0x80) {
+        /* NOTE: dta_105 restricts strf to ASCII */
+        let s = u8_to_str(d.raw.slice(d.ptr, d.ptr + t - 0x7F));
+        s = s.replace(/\x00[\s\S]*/,"");
+        row[C] = s;
+        d.ptr += t - 0x7F;
       } else switch(t) {
         case 251: case 0x62: row[C] = read_i8(d); break; // byte
         case 252: case 0x69: row[C] = read_i16(d, LE); break; // int
@@ -518,12 +577,38 @@ function parse_legacy(raw: Uint8Array): WorkBook {
         case 255: case 0x64: row[C] = read_f64(d, LE); break; // double
         default: throw (`Unsupported field type ${t} for ${var_names[C]}`);
       }
+      if(typeof row[C] == "number" && formats[C]) row[C] = format_number_dta(row[C], formats[C], t);
     }
     _utils.sheet_add_aoa(ws, [row], {origin: -1, sheetStubs: true});
   }
 
   /* 5.6 Value labels */
-  // EOF or labels
+  // TODO: < 115
+  if(vers >= 115) while(d.ptr < d.raw.length) {
+    const w = 33;
+    let len = read_u32(d, LE);
+    const labname = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + w)).replace(/\x00.*$/,"");
+    d.ptr += w;
+    d.ptr += 3; // padding
+    const labels: string[] = [];
+    {
+      const n = read_u32(d, LE);
+      const txtlen = read_u32(d, LE);
+      const off: number[] = [], val: number[] = [];
+      for(let i = 0; i < n; ++i) off.push(read_u32(d, LE));
+      for(let i = 0; i < n; ++i) val.push(read_u32(d, LE));
+      const str = u8_to_latin1(d.raw.slice(d.ptr, d.ptr + txtlen));
+      d.ptr += txtlen;
+      for(let i = 0; i < n; ++i) labels[val[i]] = str.slice(off[i], str.indexOf("\x00", off[i]));
+    }
+    const C = value_label_names.indexOf(labname);
+    if(C == -1) throw new Error(`unexpected value label |${labname}|`);
+    for(let R = 1; R < ws["!data"].length; ++R) {
+      const cell = ws["!data"][R][C];
+      cell.t = "s"; cell.v = cell.w = labels[(cell.v as number)||0];
+    }
+
+  }
 
   const wb: WorkBook = _utils.book_new();
   _utils.book_append_sheet(wb, ws, "Sheet1");
