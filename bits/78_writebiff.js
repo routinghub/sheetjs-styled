@@ -31,7 +31,7 @@ function write_biff_continue(ba/*:BufArray*/, type/*:number*/, payload, length/*
 	}
 }
 
-function write_BIFF2BERR(r/*:number*/, c/*:number*/, val, t/*:string*/) {
+function write_BIFF2BERR(r/*:number*/, c/*:number*/, val, t/*:?string*/) {
 	var out = new_buf(9);
 	write_BIFF2Cell(out, r, c);
 	write_Bes(val, t || 'b', out);
@@ -101,7 +101,7 @@ function write_ws_biff2_cell(ba/*:BufArray*/, cell/*:Cell*/, R/*:number*/, C/*:n
 
 function write_ws_biff2(ba/*:BufArray*/, ws/*:Worksheet*/, idx/*:number*/, opts, wb/*:Workbook*/) {
 	var dense = ws["!data"] != null;
-	var range = safe_decode_range(ws['!ref'] || "A1"), ref/*:string*/, rr = "", cols/*:Array<string>*/ = [];
+	var range = safe_decode_range(ws['!ref'] || "A1"), rr = "", cols/*:Array<string>*/ = [];
 	if(range.e.c > 0xFF || range.e.r > 0x3FFF) {
 		if(opts.WTF) throw new Error("Range " + (ws['!ref'] || "A1") + " exceeds format limit A1:IV16384");
 		range.e.c = Math.min(range.e.c, 0xFF);
@@ -545,9 +545,9 @@ function write_ws_biff8(idx/*:number*/, opts, wb/*:Workbook*/) {
 
 	var date1904 = (((wb||{}).Workbook||{}).WBProps||{}).date1904;
 	if(b8) ws['!links'] = [];
+	for(var C = range.s.c; C <= range.e.c; ++C) cols[C] = encode_col(C);
 	var comments = [];
 	var row = [];
-	for(var C = range.s.c; C <= range.e.c; ++C) cols[C] = encode_col(C);
 	for(var R = range.s.r; R <= range.e.r; ++R) {
 		if(dense) row = ws["!data"][R] || [];
 		rr = encode_row(R);

@@ -367,13 +367,13 @@ if(!browser) describe('should parse test files', function() {
 });
 
 function get_cell(ws/*:Worksheet*/, addr/*:string*/) {
-	if(!Array.isArray(ws)) return ws[addr];
+	if(!ws["!data"]) return ws[addr];
 	var a = X.utils.decode_cell(addr);
-	return (ws[a.r]||[])[a.c];
+	return (ws["!data"][a.r]||[])[a.c];
 }
 
 function each_cell(ws, f) {
-	if(Array.isArray(ws)) ws.forEach(function(row) { if(row) row.forEach(f); });
+	if(ws["!data"]) ws["!data"].forEach(function(row) { if(row) row.forEach(f); });
 	else Object.keys(ws).forEach(function(addr) { if(addr[0] === "!" || !ws.hasOwnProperty(addr)) return; f(ws[addr]); });
 }
 
@@ -1023,10 +1023,14 @@ describe('parse features', function() {
 	});
 
 	describe('column properties', function() {
-		var wbs = [], wbs_no_slk = [];
+		var wbs = [], wbs_no_slk = [], ols = [];
+		var ol = fs.existsSync(paths.olxls);
 		var bef = (function() {
 			wbs = CWPaths.map(function(n) { return X.read(fs.readFileSync(n), {type:TYPE, cellStyles:true}); });
 			wbs_no_slk = wbs.slice(0, 5);
+			/* */
+			if(!ol) return;
+			ols = OLPaths.map(function(p) { return X.read(fs.readFileSync(p), {type:TYPE, cellStyles:true}); });
 		});
 		if(typeof before != 'undefined') before(bef);
 		else it('before', bef);
@@ -1059,6 +1063,22 @@ describe('parse features', function() {
 				assert.equal(x[5].wpx, 53);
 				assert.equal(x[6].wpx, 77);
 				assert.equal(x[7].wpx, 101);
+			});
+		});
+		it('should have correct outline levels', function() {
+			ols.map(function(x) { return x.Sheets["Sheet1"]; }).forEach(function(ws) {
+				var cols = ws['!cols'];
+				if(!cols) return; // TODO: ODS!!!
+				for(var i = 0; i < 29; ++i) {
+					var cell = get_cell(ws, X.utils.encode_col(i) + "1");
+					var lvl = (cols[i]||{}).level||0;
+					if(!cell || cell.t == 's') assert.equal(lvl, 0);
+					else if(cell.t == 'n') {
+						if(cell.v === 0) assert.equal(lvl, 0);
+						else assert.equal(lvl, cell.v);
+					}
+				}
+				assert.equal(cols[29].level, 7);
 			});
 		});
 	});
@@ -2476,10 +2496,12 @@ describe('dbf', function() {
 	it(wbs[1][0], function() {
 		var wsfalse = wbsfalse[1][1].Sheets["Sheet1"];
 		[
-			["A1", "v", "CHAR10"], ["A2", "v", "test1"], ["B2", "v", 123.45], ["C2", "v", 12.345], ["D2", "v", 1234.1],
+			["A1", "v", "CHAR10"], ["A2", "v", "test1"], ["B2", "v", 123.45],
+			["C2", "v", 12.345], ["D2", "v", 1234.1],
 			["E2", "v", 6260], ["E2", "w", "19170219"],
 			["F2", "v", 6260], ["F2", "w", "19170219"],
-			["G2", "v", 1231.4], ["H2", "v", 123234], ["I2", "v", true], ["L2", "v", "SheetJS"]
+			["G2", "v", 1231.4], ["H2", "v", 123234],
+			["I2", "v", true], ["L2", "v", "SheetJS"]
 		].forEach(function(r) {
 			assert.equal(get_cell(wsfalse, r[0])[r[1]], r[2]);
 		});
@@ -2700,6 +2722,97 @@ describe('rtf', function() {
 		var wb2 = X.read(rtf1, {type: "string"});
 		var rtf2 = X.write(wb2, {bookType: "rtf", type: "string"});
 		assert.equal(rtf1, rtf2);
+	});
+});
+
+describe('dense mode', function() {
+	it('sheet_new', function() {
+		var sp = X.utils.sheet_new(); assert.ok(!sp["!data"]);
+		sp = X.utils.sheet_new({}); assert.ok(!sp["!data"]);
+		sp = X.utils.sheet_new({dense: false}); assert.ok(!sp["!data"]);
+		sp = X.utils.sheet_new({dense: true}); assert.ok(!!sp["!data"]);
+	});
+
+	it('read', function() {
+		ILPaths.forEach(function(p) {
+			var wb = X.read(fs.readFileSync(p), {type: TYPE, WTF: true});
+			var ws = wb.Sheets[wb.SheetNames[0]];
+			assert.equal(ws["A1"].v, "Link to Sheet2");
+			assert.ok(!ws["!data"]);
+
+			wb = X.read(fs.readFileSync(p), {type: TYPE, WTF: true, dense: true});
+			ws = wb.Sheets[wb.SheetNames[0]];
+			assert.ok(!ws["A1"]);
+			assert.equal(ws["!data"][0][0].v, "Link to Sheet2");
+		});
+		if(!browser) artifax.forEach(function(p) {
+			var wb = X.read(fs.readFileSync(p), {type: TYPE, WTF: true});
+			var ws = wb.Sheets[wb.SheetNames[0]];
+			assert.ok(ws["A1"]);
+			assert.ok(!ws["!data"]);
+
+			wb = X.read(fs.readFileSync(p), {type: TYPE, WTF: true, dense: true});
+			ws = wb.Sheets[wb.SheetNames[0]];
+			assert.ok(!ws["A1"]);
+			assert.ok(ws["!data"][0][0]);
+		});
+	});
+	it('aoa_to_sheet', function() {
+		var aoa = [["SheetJS"],[5433795]];
+		var sp = X.utils.aoa_to_sheet(aoa); assert.equal(sp["A2"].v, 5433795); assert.ok(!sp["!data"]);
+		sp = X.utils.aoa_to_sheet(aoa, {}); assert.equal(sp["A2"].v, 5433795); assert.ok(!sp["!data"]);
+		sp = X.utils.aoa_to_sheet(aoa, {dense: false}); assert.equal(sp["A2"].v, 5433795); assert.ok(!sp["!data"]);
+		var ds = X.utils.aoa_to_sheet(aoa, {dense: true}); assert.equal(ds["!data"][1][0].v, 5433795); assert.ok(!ds["A2"]);
+	});
+	it('json_to_sheet', function() {
+		var json = [{"SheetJS": 5433795}];
+		var sp = X.utils.json_to_sheet(json); assert.equal(sp["A2"].v, 5433795); assert.ok(!sp["!data"]);
+		sp = X.utils.json_to_sheet(json, {}); assert.equal(sp["A2"].v, 5433795); assert.ok(!sp["!data"]);
+		sp = X.utils.json_to_sheet(json, {dense: false}); assert.equal(sp["A2"].v, 5433795); assert.ok(!sp["!data"]);
+		var ds = X.utils.json_to_sheet(json, {dense: true}); assert.equal(ds["!data"][1][0].v, 5433795); assert.ok(!ds["A2"]);
+	});
+	it('sheet_add_aoa', function() {
+		var aoa = [["SheetJS"]];
+		var sp = X.utils.aoa_to_sheet(aoa); X.utils.sheet_add_aoa(sp, [[5433795]], {origin:-1}); assert.equal(sp["A2"].v, 5433795); assert.ok(!sp["!data"]);
+		sp = X.utils.aoa_to_sheet(aoa); X.utils.sheet_add_aoa(sp, [[5433795]], {origin:-1, dense: true}); assert.equal(sp["A2"].v, 5433795); assert.ok(!sp["!data"]);
+		var ds = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_aoa(ds, [[5433795]], {origin:-1}); assert.equal(ds["!data"][1][0].v, 5433795); assert.ok(!ds["A2"]);
+		ds = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_aoa(ds, [[5433795]], {origin:-1, dense: true}); assert.equal(ds["!data"][1][0].v, 5433795); assert.ok(!ds["A2"]);
+	});
+	it('sheet_add_json', function() {
+		var aoa = [["SheetJS"]];
+		var sp = X.utils.aoa_to_sheet(aoa); X.utils.sheet_add_json(sp, [{X:5433795}], {origin:-1, skipHeader:1}); assert.equal(sp["A2"].v, 5433795); assert.ok(!sp["!data"]);
+		sp = X.utils.aoa_to_sheet(aoa); X.utils.sheet_add_json(sp, [{X:5433795}], {origin:-1, skipHeader: 1, dense: true}); assert.equal(sp["A2"].v, 5433795); assert.ok(!sp["!data"]);
+		var ds = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_json(ds, [{X:5433795}], {origin:-1, skipHeader: 1}); assert.equal(ds["!data"][1][0].v, 5433795); assert.ok(!ds["A2"]);
+		ds = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_json(ds, [{X:5433795}], {origin:-1, skipHeader: 1, dense: true}); assert.equal(ds["!data"][1][0].v, 5433795); assert.ok(!ds["A2"]);
+	});
+	ofmt.forEach(function(f) { it('write ' + f, function() {
+		var aoa = [["SheetJS"],[5433795]];
+		var wb = X.utils.book_new(X.utils.aoa_to_sheet(aoa));
+		var newwb = X.read(X.write(wb, {type:"binary", bookType:f}), {type:"binary"});
+		assert.equal(get_cell(newwb.Sheets["Sheet1"], "A1").v, "SheetJS");
+		assert.equal(get_cell(newwb.Sheets["Sheet1"], "A2").v, 5433795);
+	}); });
+	it('sheet_to_formulae', function() {
+		var w = ['xlsx', paths.fstxlsx];
+		var wb1 = X.read(fs.readFileSync(w[1]), {type:TYPE, cellFormula:true, WTF:true, dense: false});
+		var wb2 = X.read(fs.readFileSync(w[1]), {type:TYPE, cellFormula:true, WTF:true, dense: true});
+		wb1.SheetNames.forEach(function(n) {
+			assert.equal(
+				X.utils.sheet_to_formulae(wb1.Sheets[n]).sort().join("\n"),
+				X.utils.sheet_to_formulae(wb2.Sheets[n]).sort().join("\n")
+			);
+		});
+	});
+	it('sheet_to_csv', function() {
+		var w = ['xlsx', paths.fstxlsx];
+		var wb1 = X.read(fs.readFileSync(w[1]), {type:TYPE, cellFormula:true, WTF:true, dense: false});
+		var wb2 = X.read(fs.readFileSync(w[1]), {type:TYPE, cellFormula:true, WTF:true, dense: true});
+		wb1.SheetNames.forEach(function(n) {
+			assert.equal(
+				X.utils.sheet_to_csv(wb1.Sheets[n]),
+				X.utils.sheet_to_csv(wb2.Sheets[n])
+			);
+		});
 	});
 });
 

@@ -202,11 +202,11 @@ function write_names_ods(Names, SheetNames, idx) {
 }
 var write_content_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function() {
 	/* 6.1.2 White Space Characters */
-	var write_text_p = function(text/*:string*/)/*:string*/ {
+	var write_text_p = function(text/*:string*/, span)/*:string*/ {
 		return escapexml(text)
 			.replace(/  +/g, function($$){return '<text:s text:c="'+$$.length+'"/>';})
 			.replace(/\t/g, "<text:tab/>")
-			.replace(/\n/g, "</text:p><text:p>")
+			.replace(/\n/g, span ? "<text:line-break/>": "</text:p><text:p>")
 			.replace(/^ /, "<text:s/>").replace(/ $/, "<text:s/>");
 	};
 

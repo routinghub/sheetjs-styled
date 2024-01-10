@@ -125,7 +125,7 @@ function parse_workbook(blob, options/*:ParseOpts*/)/*:Workbook*/ {
 		if(icv < 64) return palette[icv-8] || XLSIcv[icv];
 		return XLSIcv[icv];
 	};
-	var process_cell_style = function pcs(cell, line/*:any*/, options) {
+	var process_cell_style = function pcs(line/*:any*/, options) {
 		var xfd = line.XF.data;
 		if(!xfd || !xfd.patternType || !options || !options.cellStyles) return;
 		line.s = ({}/*:any*/);
@@ -137,7 +137,7 @@ function parse_workbook(blob, options/*:ParseOpts*/)/*:Workbook*/ {
 	var addcell = function addcell(cell/*:any*/, line/*:any*/, options/*:any*/) {
 		if(!biff4w && file_depth > 1) return;
 		if(options.sheetRows && cell.r >= options.sheetRows) return;
-		if(options.cellStyles && line.XF && line.XF.data) process_cell_style(cell, line, options);
+		if(options.cellStyles && line.XF && line.XF.data) process_cell_style(line, options);
 		delete line.ixfe; delete line.XF;
 		lastcell = cell;
 		last_cell = encode_cell(cell);

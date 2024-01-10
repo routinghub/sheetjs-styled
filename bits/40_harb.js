@@ -483,6 +483,7 @@ var SYLK = /*#__PURE__*/(function() {
 					val = record[rj].slice(1);
 					if(val.charAt(0) === '"') { val = val.slice(1,val.length - 1); cell_t = "s"; }
 					else if(val === 'TRUE' || val === 'FALSE') { val = val === 'TRUE'; cell_t = "b"; }
+					else if(val.charAt(0) == "#" && RBErr[val] != null) { cell_t = "e"; val = RBErr[val]; }
 					else if(!isNaN(fuzzynum(val))) {
 						val = fuzzynum(val); cell_t = "n";
 						if(next_cell_format !== null && fmt_is_date(next_cell_format) && opts.cellDates) {
@@ -595,7 +596,7 @@ var SYLK = /*#__PURE__*/(function() {
 				o += (cell.v||0);
 				if(cell.f && !cell.F) o += ";E" + a1_to_rc(cell.f, {r:R, c:C}); break;
 			case 'b': o += cell.v ? "TRUE" : "FALSE"; break;
-			case 'e': o += cell.w || cell.v; break;
+			case 'e': o += cell.w || BErr[cell.v] || cell.v; break;
 			case 'd': o += datenum(parseDate(cell.v, date1904), date1904); break;
 			case 's': o += '"' + (cell.v == null ? "" : String(cell.v)).replace(/"/g,"").replace(/;/g, ";;") + '"'; break;
 		}

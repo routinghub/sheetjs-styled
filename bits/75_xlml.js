@@ -99,10 +99,11 @@ function parse_xlml_data(xml, ss, data, cell/*:any*/, base, styles, csty, row, a
 	if(sid === undefined && row) sid = row.StyleID;
 	if(sid === undefined && csty) sid = csty.StyleID;
 	while(styles[sid] !== undefined) {
-		if(styles[sid].nf) nf = styles[sid].nf;
-		if(styles[sid].Interior) interiors.push(styles[sid].Interior);
-		if(!styles[sid].Parent) break;
-		sid = styles[sid].Parent;
+		var ssid = styles[sid];
+		if(ssid.nf) nf = ssid.nf;
+		if(ssid.Interior) interiors.push(ssid.Interior);
+		if(!ssid.Parent) break;
+		sid = ssid.Parent;
 	}
 	switch(data.Type) {
 		case 'Boolean':

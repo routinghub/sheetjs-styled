@@ -52,7 +52,7 @@ const wb = DTA.parse(fs.readFileSync("auto.dta"));
 DTA.set_utils(XLSX.utils);
 (async() => {
   /* fetch file */
-	const data = await (await fetch("test.dta")).arrayBuffer();
+  const data = await (await fetch("test.dta")).arrayBuffer();
   /* parse */
   const wb = DTA.parse(new Uint8Array(data));
   /* wb is a SheetJS workbook object */
