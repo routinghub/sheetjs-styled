@@ -31,7 +31,7 @@ function rtf_to_sheet_str(str: string, opts: ParsingOptions): WorkSheet {
 	var dense = o.dense;
 	if(dense) ws["!data"] = [];
 
-	var rows = str.match(/\\trowd[\s\S]*?\\row\b/g);
+	var rows = str_match_ng(str, "\\trowd", "\\row");
 	if(!rows) throw new Error("RTF missing table");
 	var range: Range = {s: {c:0, r:0}, e: {c:0, r:rows.length - 1}};
 	var row: CellObject[] = [];

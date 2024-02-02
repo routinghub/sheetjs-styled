@@ -8,7 +8,6 @@ function write_csv_stream(sheet/*:Worksheet*/, opts/*:?Sheet2CSVOpts*/) {
 	var r = safe_decode_range(sheet["!ref"]);
 	var FS = o.FS !== undefined ? o.FS : ",", fs = FS.charCodeAt(0);
 	var RS = o.RS !== undefined ? o.RS : "\n", rs = RS.charCodeAt(0);
-	var endregex = new RegExp((FS=="|" ? "\\|" : FS)+"+$");
 	var row/*:?string*/ = "", cols/*:Array<string>*/ = [];
 	var colinfo/*:Array<ColInfo>*/ = o.skipHidden && sheet["!cols"] || [];
 	var rowinfo/*:Array<RowInfo>*/ = o.skipHidden && sheet["!rows"] || [];
@@ -22,7 +21,6 @@ function write_csv_stream(sheet/*:Worksheet*/, opts/*:?Sheet2CSVOpts*/) {
 			if ((rowinfo[R-1]||{}).hidden) continue;
 			row = make_csv_row(sheet, r, R-1, cols, fs, rs, FS, o);
 			if(row != null) {
-				if(o.strip) row = row.replace(endregex,"");
 				if(row || (o.blankrows !== false)) return stream.push((w++ ? RS : "") + row);
 			}
 		}

@@ -195,7 +195,7 @@ function fuzzydate(s/*:string*/)/*:Date*/ {
 	M = lnos.match(FDRE2);
 	if(M) return fuzzytime2(M);
 	M = lnos.match(pdre3);
-	if(M) return new Date(Date.UTC(+M[1], +M[2]-1, +M[3], +M[4], +M[5], ((M[6] && parseInt(M[6].slice(1), 10))|| 0), ((M[7] && parseInt(M[7].slice(1), 10))||0)));
+	if(M) return new Date(Date.UTC(+M[1], +M[2]-1, +M[3], +M[4], +M[5], ((M[6] && parseInt(M[6].slice(1), 10))|| 0), ((M[7] && parseInt((M[7] + "0000").slice(1,4), 10))||0)));
 	var o = new Date(utc_append_works && s.indexOf("UTC") == -1 ? s + " UTC": s), n = new Date(NaN);
 	var y = o.getYear(), m = o.getMonth(), d = o.getDate();
 	if(isNaN(d)) return n;
@@ -223,3 +223,96 @@ function utc_to_local(utc) {
 function local_to_utc(local) {
 	return new Date(Date.UTC(local.getFullYear(), local.getMonth(), local.getDate(), local.getHours(), local.getMinutes(), local.getSeconds(), local.getMilliseconds()));
 }
+
+/* str.match(/<!--[\s\S]*?-->/g) --> str_match_ng(str, "<!--", "-->") */
+function str_match_ng(str, s, e) {
+  var out = [];
+
+  var si = str.indexOf(s);
+  while(si > -1) {
+    var ei = str.indexOf(e, si + s.length);
+		if(ei == -1) break;
+
+		out.push(str.slice(si, ei + e.length));
+		si = str.indexOf(s, ei + e.length);
+	}
+
+  return out.length > 0 ? out : null;
+}
+
+/* str.replace(/<!--[\s\S]*?-->/g, "") --> str_remove_ng(str, "<!--", "-->") */
+function str_remove_ng(str, s, e) {
+  var out = [], last = 0;
+
+  var si = str.indexOf(s);
+	if(si == -1) return str;
+  while(si > -1) {
+		out.push(str.slice(last, si));
+    var ei = str.indexOf(e, si + s.length);
+		if(ei == -1) break;
+
+		if((si = str.indexOf(s, (last = ei + e.length))) == -1) out.push(str.slice(last));
+	}
+
+  return out.join("");
+}
+
+/* str.match(/<tag[^>]*?>([\s\S]*?)</tag>/) --> str_match_xml(str, "tag") */
+function str_match_xml(str, tag) {
+	var si = str.indexOf('<' + tag);
+	if(si === -1) return null;
+	var sf = str.indexOf(">", si);
+	if(sf === -1) return null;
+	var et = "</" + tag + ">";
+	var ei = str.indexOf(et, sf);
+	if(ei == -1) return null;
+	return [str.slice(si, ei + et.length), str.slice(sf + 1, ei)];
+}
+
+var str_match_xml_ns = /*#__PURE__*/(function() {
+	var str_match_xml_ns_cache = {};
+	return function str_match_xml_ns(str, tag) {
+		var res = str_match_xml_ns_cache[tag];
+		if(!res) str_match_xml_ns_cache[tag] = res = [
+			new RegExp('<(?:\\w+:)?'+tag+'[^>]*>', "g"),
+			new RegExp('</(?:\\w+:)?'+tag+'>', "g")
+		];
+		res[0].lastIndex = res[1].lastIndex = 0;
+		var m = res[0].exec(str);
+		if(!m) return null;
+		var si = m.index;
+		var sf = res[0].lastIndex;
+		res[1].lastIndex = res[0].lastIndex;
+		m = res[1].exec(str);
+		if(!m) return null;
+		var ei = m.index;
+		var ef = res[1].lastIndex;
+		return [str.slice(si, ef), str.slice(sf, ei)];
+	};
+})();
+
+var str_match_xml_ns_g = /*#__PURE__*/(function() {
+	var str_match_xml_ns_cache = {};
+	return function str_match_xml_ns(str, tag) {
+		var out = [];
+		var res = str_match_xml_ns_cache[tag];
+		if(!res) str_match_xml_ns_cache[tag] = res = [
+			new RegExp('<(?:\\w+:)?'+tag+'[^>]*>', "g"),
+			new RegExp('</(?:\\w+:)?'+tag+'>', "g")
+		];
+		res[0].lastIndex = res[1].lastIndex = 0;
+		var m;
+		while((m = res[0].exec(str))) {
+			var si = m.index;
+			var sf = res[0].lastIndex;
+			res[1].lastIndex = res[0].lastIndex;
+			m = res[1].exec(str);
+			if(!m) return null;
+			var ei = m.index;
+			var ef = res[1].lastIndex;
+			out.push(str.slice(si, ef));
+			res[0].lastIndex = res[1].lastIndex;
+		}
+		return out.length == 0 ? null : out;
+	};
+})();

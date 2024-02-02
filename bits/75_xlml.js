@@ -222,7 +222,7 @@ function parse_xlml_xml(d, _opts)/*:Workbook*/ {
 	var rowinfo/*:Array<RowInfo>*/ = [], rowobj = {}, cc = 0, rr = 0;
 	var Workbook/*:WBWBProps*/ = ({ Sheets:[], WBProps:{date1904:false} }/*:any*/), wsprops = {};
 	xlmlregex.lastIndex = 0;
-	str = str.replace(/<!--([\s\S]*?)-->/mg,"");
+	str = str_remove_ng(str, "<!--", "-->");
 	var raw_Rn3 = "";
 	while((Rn = xlmlregex.exec(str))) switch((Rn[3] = (raw_Rn3 = Rn[3]).toLowerCase())) {
 		case 'data' /*case 'Data'*/:

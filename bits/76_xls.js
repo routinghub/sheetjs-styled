@@ -330,17 +330,17 @@ function parse_workbook(blob, options/*:ParseOpts*/)/*:Workbook*/ {
 				} break;
 				case 0x0009: case 0x0209: case 0x0409: case 0x0809 /* BOF */: {
 					if(opts.biff === 8) opts.biff = {
-						/*::[*/0x0009/*::]*/:2,
-						/*::[*/0x0209/*::]*/:3,
-						/*::[*/0x0409/*::]*/:4
+						0x0009: 2,
+						0x0209: 3,
+						0x0409: 4
 					}[RecordType] || {
-						/*::[*/0x0200/*::]*/:2,
-						/*::[*/0x0300/*::]*/:3,
-						/*::[*/0x0400/*::]*/:4,
-						/*::[*/0x0500/*::]*/:5,
-						/*::[*/0x0600/*::]*/:8,
-						/*::[*/0x0002/*::]*/:2,
-						/*::[*/0x0007/*::]*/:2
+						0x0200: 2,
+						0x0300: 3,
+						0x0400: 4,
+						0x0500: 5,
+						0x0600: 8,
+						0x0002: 2,
+						0x0007: 2
 					}[val.BIFFVer] || 8;
 					opts.biffguess = val.BIFFVer == 0;
 					if(val.BIFFVer == 0 && val.dt == 0x1000) { opts.biff = 5; seen_codepage = true; set_cp(opts.codepage = 28591); }
