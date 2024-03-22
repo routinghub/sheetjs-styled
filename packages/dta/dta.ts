@@ -1,7 +1,7 @@
 import { CellObject, DenseWorkSheet, WorkBook, type utils } from 'xlsx';
 export { parse, set_utils, version };
 
-const version = "0.0.1";
+const version = "0.0.2";
 
 let _utils: typeof utils;
 /** Set internal instance of `utils`
@@ -92,7 +92,6 @@ function read_f32(p: Payload, LE: boolean): number | null {
   p.ptr += 4;
   const d = p.dv.getFloat32(p.ptr - 4, LE);
   return d > 1.701e+38 ? null : d;
-
 }
 function read_u32(p: Payload, LE: boolean) {
   p.ptr += 4;
@@ -150,7 +149,7 @@ function parse_tagged(raw: Uint8Array): WorkBook {
     ptr: 0,
     raw,
     dv: u8_to_dataview(raw)
-  }
+  };
 
   let vers: number = 118;
   let LE: boolean = true;
@@ -469,6 +468,7 @@ function parse_tagged(raw: Uint8Array): WorkBook {
   if(!valid_inc(d, "</stata_dta>")) throw err;
   const wb = _utils.book_new();
   _utils.book_append_sheet(wb, ws, "Sheet1");
+  wb.bookType = "dta" as any;
   return wb;
 }
 
@@ -480,7 +480,7 @@ function parse_legacy(raw: Uint8Array): WorkBook {
     ptr: 1,
     raw,
     dv: u8_to_dataview(raw)
-  }
+  };
 
   let LE: boolean = true;
   let nvar: number = 0, nobs: number = 0;
@@ -612,6 +612,7 @@ function parse_legacy(raw: Uint8Array): WorkBook {
 
   const wb: WorkBook = _utils.book_new();
   _utils.book_append_sheet(wb, ws, "Sheet1");
+  wb.bookType = "dta" as any;
   return wb;
 }
 

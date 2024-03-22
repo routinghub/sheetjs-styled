@@ -17,7 +17,7 @@ types: dta.ts
 node: dist/dta.js
 
 dist/dta.js: dta.ts
-	npx esbuild@0.14.14 dta.ts --bundle --outdir=dist --platform=node
+	npx esbuild@0.14.14 $< --bundle --outfile=$@ --platform=node
 
 .PHONY: test-node
 test-node: dist/dta.js test.js
@@ -28,5 +28,8 @@ test-node: dist/dta.js test.js
 browser: dist/dta.min.js
 
 dist/dta.min.js: dta.ts
-	npx esbuild@0.14.14 dta.ts --bundle --outfile=dist/dta.min.js --minify --sourcemap --global-name=DTA
+	npx esbuild@0.14.14 $< --bundle --outfile=$@ --minify --sourcemap --global-name=DTA
+
+dist/dta.mjs: dta.ts
+	npx esbuild@0.14.14 $< --bundle --outfile=$@ --minify --sourcemap --format=esm
 

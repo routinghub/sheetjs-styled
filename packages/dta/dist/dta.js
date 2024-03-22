@@ -28,7 +28,7 @@ __export(dta_exports, {
   set_utils: () => set_utils,
   version: () => version
 });
-var version = "0.0.1";
+var version = "0.0.2";
 var _utils;
 function set_utils(utils) {
   _utils = utils;
@@ -524,6 +524,7 @@ function parse_tagged(raw) {
     throw err;
   const wb = _utils.book_new();
   _utils.book_append_sheet(wb, ws, "Sheet1");
+  wb.bookType = "dta";
   return wb;
 }
 function parse_legacy(raw) {
@@ -668,6 +669,7 @@ function parse_legacy(raw) {
     }
   const wb = _utils.book_new();
   _utils.book_append_sheet(wb, ws, "Sheet1");
+  wb.bookType = "dta";
   return wb;
 }
 function parse(data) {
