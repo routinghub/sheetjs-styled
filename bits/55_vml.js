@@ -1,8 +1,7 @@
 /* L.5.5.2 SpreadsheetML Comments + VML Schema */
-var shapevmlregex = /<(?:\w+:)?shape(?:[^\w][^>]*)?>([\s\S]*?)<\/(?:\w+:)?shape>/g;
 function parse_vml(data/*:string*/, sheet, comments) {
 	var cidx = 0;
-	(data.match(shapevmlregex)||[]).forEach(function(m) {
+	(str_match_xml_ns_g(data, "shape")||[]).forEach(function(m) {
 		var type = "";
 		var hidden = true;
 		var aidx = -1;

@@ -6,6 +6,7 @@ changes may not be included if they are not expected to break existing code.
 
 ## v0.20.2
 
+* Reworked parsing methods to avoid slow regexes (CVE-2024-22363)
 * HTML properly encode data-v attribute
 * SYLK read and write error cells
 

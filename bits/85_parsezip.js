@@ -204,7 +204,7 @@ function parse_zip(zip/*:ZIP*/, opts/*:?ParseOpts*/)/*:Workbook*/ {
 		if(wbrels && wbrels[i]) {
 			path = 'xl/' + (wbrels[i][1]).replace(/[\/]?xl\//, "");
 			if(!safegetzipfile(zip, path)) path = wbrels[i][1];
-			if(!safegetzipfile(zip, path)) path = wbrelsfile.replace(/_rels\/.*$/,"") + wbrels[i][1];
+			if(!safegetzipfile(zip, path)) path = wbrelsfile.replace(/_rels\/[\S\s]*$/,"") + wbrels[i][1];
 			stype = wbrels[i][2];
 		} else {
 			path = 'xl/worksheets/sheet'+(i+1-nmode)+"." + wbext;

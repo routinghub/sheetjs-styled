@@ -8,7 +8,7 @@ function html_to_sheet(str/*:string*/, _opts)/*:Workbook*/ {
 	if(!mtch) throw new Error("Invalid HTML: could not find <table>");
 	var mtch2/*:any*/ = str.match(/<\/table/i);
 	var i/*:number*/ = mtch.index, j/*:number*/ = mtch2 && mtch2.index || str.length;
-	var rows = split_regex(str.slice(i, j), /(:?<tr[^>]*>)/i, "<tr>");
+	var rows = split_regex(str.slice(i, j), /(:?<tr[^<>]*>)/i, "<tr>");
 	var R = -1, C = 0, RS = 0, CS = 0;
 	var range/*:Range*/ = {s:{r:10000000, c:10000000},e:{r:0,c:0}};
 	var merges/*:Array<Range>*/ = [];
@@ -99,7 +99,7 @@ var HTML_BEGIN = '<html><head><meta charset="utf-8"/><title>SheetJS Table Export
 var HTML_END = '</body></html>';
 
 function html_to_workbook(str/*:string*/, opts)/*:Workbook*/ {
-	var mtch = str.match(/<table[\s\S]*?>[\s\S]*?<\/table>/gi);
+	var mtch = str_match_xml_ig(str, "table");
 	if(!mtch || mtch.length == 0) throw new Error("Invalid HTML: could not find <table>");
 	if(mtch.length == 1) {
 		var w = sheet_to_workbook(html_to_sheet(mtch[0], opts), opts);

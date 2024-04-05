@@ -67,7 +67,7 @@ function write_number_format_ods(nf/*:string*/, nfidx/*:string*/)/*:string*/ {
 		if((t=nf.match(/# (\?+)\/(\d+)/))) { payload += writextag("number:fraction", null, {"number:min-integer-digits":0, "number:min-numerator-digits": t[1].length, "number:denominator-value": +t[2]}); break j; }
 
 		/* percentages */
-		if((t=nf.match(/(\d+)(|\.\d+)%/))) { type = "percentage"; payload += writextag("number:number", null, {"number:decimal-places": t[2] && t.length - 1 || 0, "number:min-decimal-places": t[2] && t.length - 1 || 0, "number:min-integer-digits": t[1].length }) + "<number:text>%</number:text>"; break j; }
+		if((t=nf.match(/\b(\d+)(|\.\d+)%/))) { type = "percentage"; payload += writextag("number:number", null, {"number:decimal-places": t[2] && t.length - 1 || 0, "number:min-decimal-places": t[2] && t.length - 1 || 0, "number:min-integer-digits": t[1].length }) + "<number:text>%</number:text>"; break j; }
 
 		/* datetime */
 		var has_time = false;
@@ -196,7 +196,7 @@ function write_names_ods(Names, SheetNames, idx) {
 		return "        " + writextag("table:named-range", null, {
 			"table:name": name.Name,
 			"table:cell-range-address": odsref,
-			"table:base-cell-address": odsref.replace(/[\.]?[^\.]*$/, ".$A$1")
+			"table:base-cell-address": odsref.replace(/[\.][^\.]*$/, ".$A$1")
 		});
 	}).join("\n") + "\n      </table:named-expressions>\n";
 }
@@ -436,7 +436,7 @@ var write_content_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function
 
 		if(opts.bookType == "fods") {
 			o.push('<office:document' + attr + fods + '>\n');
-			o.push(write_meta_ods().replace(/<office:document-meta.*?>/, "").replace(/<\/office:document-meta>/, "") + "\n");
+			o.push(write_meta_ods().replace(/<office:document-meta[^<>]*?>/, "").replace(/<\/office:document-meta>/, "") + "\n");
 			// TODO: settings (equiv of settings.xml for ODS)
 		} else o.push('<office:document-content' + attr  + '>\n');
 		// o.push('  <office:scripts/>\n');

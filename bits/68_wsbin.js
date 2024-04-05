@@ -924,7 +924,7 @@ function write_HLINKS(ba, ws/*:Worksheet*/, rels) {
 	/* *BrtHLink */
 	ws['!links'].forEach(function(l) {
 		if(!l[1].Target) return;
-		var rId = add_rels(rels, -1, l[1].Target.replace(/#.*$/, ""), RELS.HLINK);
+		var rId = add_rels(rels, -1, l[1].Target.replace(/#[\s\S]*$/, ""), RELS.HLINK);
 		write_record(ba, 0x01EE /* BrtHLink */, write_BrtHLink(l, rId));
 	});
 	delete ws['!links'];

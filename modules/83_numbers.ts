@@ -1281,7 +1281,7 @@ function numbers_iwa_find(cfb: CFB$Container, deps: Dependents, id: number) {
 function numbers_add_meta(mlist: ProtoMessage, newid: number, newloc: string) {
 	mlist[3].push({type: 2, data: write_shallow([ [],
 		[{type: 0, data: write_varint49(newid)}],
-		[{type: 2, data: stru8(newloc.replace(/-.*$/, "")) }],
+		[{type: 2, data: stru8(newloc.replace(/-[\s\S]*$/, "")) }],
 		[{type: 2, data: stru8(newloc)}],
 		[{type: 2, data: new Uint8Array([2, 0, 0])}],
 		[{type: 2, data: new Uint8Array([2, 0, 0])}],

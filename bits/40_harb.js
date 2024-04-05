@@ -118,7 +118,7 @@ function dbf_to_aoa(buf, opts)/*:AOA*/ {
 	var ww = l7 ? 32 : 11;
 	while(d.l < hend && d[d.l] != 0x0d) {
 		field = ({}/*:any*/);
-		field.name = (typeof $cptable !== "undefined" ? $cptable.utils.decode(current_cp, d.slice(d.l, d.l+ww)) : a2s(d.slice(d.l, d.l + ww))).replace(/[\u0000\r\n].*$/g,"");
+		field.name = (typeof $cptable !== "undefined" ? $cptable.utils.decode(current_cp, d.slice(d.l, d.l+ww)) : a2s(d.slice(d.l, d.l + ww))).replace(/[\u0000\r\n][\S\s]*$/g,"");
 		d.l += ww;
 		field.type = String.fromCharCode(d.read_shift(1));
 		if(ft != 0x02 && !l7) field.offset = d.read_shift(4);
@@ -176,7 +176,7 @@ function dbf_to_aoa(buf, opts)/*:AOA*/ {
 			switch(fields[C].type) {
 				case 'C':
 					// NOTE: it is conventional to write '  /  /  ' for empty dates
-					if(s.trim().length) out[R][C] = s.replace(/\s+$/,"");
+					if(s.trim().length) out[R][C] = s.replace(/([^\s])\s+$/,"$1");
 					break;
 				case 'D':
 					if(s.length === 8) {
@@ -1121,7 +1121,7 @@ function read_wb_ID(d, opts) {
 		return out;
 	} catch(e) {
 		o.WTF = OLD_WTF;
-		if(!e.message.match(/SYLK bad record ID/) && OLD_WTF) throw e;
+		if((e.message.indexOf("SYLK bad record ID") == -1) && OLD_WTF) throw e;
 		return PRN.to_workbook(d, opts);
 	}
 }

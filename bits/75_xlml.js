@@ -1,5 +1,5 @@
-var attregexg2=/([\w:]+)=((?:")([^"]*)(?:")|(?:')([^']*)(?:'))/g;
-var attregex2=/([\w:]+)=((?:")(?:[^"]*)(?:")|(?:')(?:[^']*)(?:'))/;
+var attregexg2=/\b((?:\w+:)?[\w]+)=((?:")([^"]*)(?:")|(?:')([^']*)(?:'))/g;
+var attregex2=/\b((?:\w+:)?[\w]+)=((?:")(?:[^"]*)(?:")|(?:')(?:[^']*)(?:'))/;
 function xlml_parsexmltag(tag/*:string*/, skip_root/*:?boolean*/) {
 	var words = tag.split(/\s+/);
 	var z/*:any*/ = ([]/*:any*/); if(!skip_root) z[0] = words[0];
@@ -112,7 +112,7 @@ function parse_xlml_data(xml, ss, data, cell/*:any*/, base, styles, csty, row, a
 			break;
 		case 'String':
 			cell.t = 's'; cell.r = xlml_fixstr(unescapexml(xml));
-			cell.v = (xml.indexOf("<") > -1 ? unescapexml(ss||xml).replace(/<.*?>/g, "") : cell.r); // todo: BR etc
+			cell.v = (xml.indexOf("<") > -1 ? unescapexml(ss||xml).replace(/<[^<>]*>/g, "") : cell.r); // todo: BR etc
 			break;
 		case 'DateTime':
 			if(xml.slice(-1) != "Z") xml += "Z";

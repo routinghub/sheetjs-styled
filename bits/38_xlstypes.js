@@ -233,8 +233,8 @@ function parse_PropertySet(blob, PIDSI) {
 				/* [MS-OSHARED] 2.3.3.2.3.1.2 + PROPVARIANT */
 				switch(blob[blob.l]) {
 					case 0x41 /*VT_BLOB*/: blob.l += 4; val = parse_BLOB(blob); break;
-					case 0x1E /*VT_LPSTR*/: blob.l += 4; val = parse_VtString(blob, blob[blob.l-4]).replace(/\u0000+$/,""); break;
-					case 0x1F /*VT_LPWSTR*/: blob.l += 4; val = parse_VtString(blob, blob[blob.l-4]).replace(/\u0000+$/,""); break;
+					case 0x1E /*VT_LPSTR*/: blob.l += 4; val = parse_VtString(blob, blob[blob.l-4]).replace(/(^|[^\u0000])\u0000+$/,"$1"); break;
+					case 0x1F /*VT_LPWSTR*/: blob.l += 4; val = parse_VtString(blob, blob[blob.l-4]).replace(/(^|[^\u0000])\u0000+$/,"$1"); break;
 					case 0x03 /*VT_I4*/: blob.l += 4; val = blob.read_shift(4, 'i'); break;
 					case 0x13 /*VT_UI4*/: blob.l += 4; val = blob.read_shift(4); break;
 					case 0x05 /*VT_R8*/: blob.l += 4; val = blob.read_shift(8, 'f'); break;

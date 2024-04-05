@@ -1,5 +1,5 @@
 /* 15.2.12.2 Custom File Properties Part */
-var custregex = /<[^>]+>[^<]*/g;
+var custregex = /<[^<>]+>[^<]*/g;
 function parse_cust_props(data/*:string*/, opts) {
 	var p = {}, name = "";
 	var m = data.match(custregex);

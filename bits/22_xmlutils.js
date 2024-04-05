@@ -1,6 +1,6 @@
 var XML_HEADER = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n';
-var attregexg=/([^"\s?>\/]+)\s*=\s*((?:")([^"]*)(?:")|(?:')([^']*)(?:')|([^'">\s]+))/g;
-var tagregex1=/<[\/\?]?[a-zA-Z0-9:_-]+(?:\s+[^"\s?>\/]+\s*=\s*(?:"[^"]*"|'[^']*'|[^'">\s=]+))*\s*[\/\?]?>/mg, tagregex2 = /<[^>]*>/g;
+var attregexg=/\s([^"\s?>\/]+)\s*=\s*((?:")([^"]*)(?:")|(?:')([^']*)(?:')|([^'">\s]+))/g;
+var tagregex1=/<[\/\?]?[a-zA-Z0-9:_-]+(?:\s+[^"\s?<>\/]+\s*=\s*(?:"[^"]*"|'[^']*'|[^'"<>\s=]+))*\s*[\/\?]?>/mg, tagregex2 = /<[^<>]*>/g;
 var tagregex = /*#__PURE__*/XML_HEADER.match(tagregex1) ? tagregex1 : tagregex2;
 var nsregex=/<\w*:/, nsregex2 = /<(\/?)\w+:/;
 function parsexmltag(tag/*:string*/, skip_root/*:?boolean*/, skip_LC/*:?boolean*/)/*:any*/ {
@@ -11,7 +11,7 @@ function parsexmltag(tag/*:string*/, skip_root/*:?boolean*/, skip_LC/*:?boolean*
 	if(eq === tag.length) return z;
 	var m = tag.match(attregexg), j=0, v="", i=0, q="", cc="", quot = 1;
 	if(m) for(i = 0; i != m.length; ++i) {
-		cc = m[i];
+		cc = m[i].slice(1);
 		for(c=0; c != cc.length; ++c) if(cc.charCodeAt(c) === 61) break;
 		q = cc.slice(0,c).trim();
 		while(cc.charCodeAt(c+1) == 32) ++c;
@@ -171,21 +171,21 @@ var htmldecode/*:{(s:string):string}*/ = /*#__PURE__*/(function() {
 				// Remove new lines and spaces from start of content
 				.replace(/^[\t\n\r ]+/, "")
 				// Remove new lines and spaces from end of content
-				.replace(/[\t\n\r ]+$/,"")
+				.replace(/(^|[^\t\n\r ])[\t\n\r ]+$/,"$1")
 				// Added line which removes any white space characters after and before html tags
-				.replace(/>\s+/g,">").replace(/\s+</g,"<")
+				.replace(/>\s+/g,">").replace(/\b\s+</g,"<")
 				// Replace remaining new lines and spaces with space
 				.replace(/[\t\n\r ]+/g, " ")
 				// Replace <br> tags with new lines
 				.replace(/<\s*[bB][rR]\s*\/?>/g,"\n")
 				// Strip HTML elements
-				.replace(/<[^>]*>/g,"");
+				.replace(/<[^<>]*>/g,"");
 		for(var i = 0; i < entities.length; ++i) o = o.replace(entities[i][0], entities[i][1]);
 		return o;
 	};
 })();
 
-var vtvregex = /<\/?(?:vt:)?variant>/g, vtmregex = /<(?:vt:)([^>]*)>([\s\S]*)</;
+var vtvregex = /<\/?(?:vt:)?variant>/g, vtmregex = /<(?:vt:)([^<"'>]*)>([\s\S]*)</;
 function parseVector(data/*:string*/, opts)/*:Array<{v:string,t:string}>*/ {
 	var h = parsexmltag(data);
 
@@ -230,9 +230,8 @@ function xlml_normalize(d)/*:string*/ {
 	if(typeof Uint8Array !== 'undefined' && d instanceof Uint8Array) return utf8read(a2s(ab2a(d)));
 	throw new Error("Bad input format: expected Buffer or string");
 }
-/* UOS uses CJK in tags */
-var xlmlregex = /<(\/?)([^\s?><!\/:]*:|)([^\s?<>:\/]+)(?:[\s?:\/](?:[^>=]|="[^"]*?")*)?>/mg;
-//var xlmlregex = /<(\/?)([a-z0-9]*:|)(\w+)[^>]*>/mg;
+/* UOS uses CJK in tags, ODS uses invalid XML */
+var xlmlregex = /<([\/]?)([^\s?><!\/:"]*:|)([^\s?<>:\/"]+)(?:\s+[^<>=?"'\s]+="[^"]*?")*\s*[\/]?>/mg;
 
 var XMLNS = ({
 	CORE_PROPS: 'http://schemas.openxmlformats.org/package/2006/metadata/core-properties',

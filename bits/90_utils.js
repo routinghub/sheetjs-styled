@@ -309,9 +309,9 @@ function book_append_sheet(wb/*:Workbook*/, ws/*:Worksheet*/, name/*:?string*/, 
 	if(!name) for(; i <= 0xFFFF; ++i, name = undefined) if(wb.SheetNames.indexOf(name = "Sheet" + i) == -1) break;
 	if(!name || wb.SheetNames.length >= 0xFFFF) throw new Error("Too many worksheets");
 	if(roll && wb.SheetNames.indexOf(name) >= 0 && name.length < 32) {
-		var m = name.match(/(^.*?)(\d+)$/);
-		i = m && +m[2] || 0;
-		var root = m && m[1] || name;
+		var m = name.match(/\d+$/); // at this point, name length is capped at 32
+		i = m && +m[0] || 0;
+		var root = m && name.slice(0, m.index) || name;
 		for(++i; i <= 0xFFFF; ++i) if(wb.SheetNames.indexOf(name = root + i) == -1) break;
 	}
 	check_ws_name(name);
