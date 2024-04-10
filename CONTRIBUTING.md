@@ -12,9 +12,9 @@ no commercial product should depend on them.
 
 These are pretty short reads and emphasize the importance of proper licensing:
 
-- https://github.com/kennethreitz/tablib/issues/114 (discussion of other tools)
+- https://github.com/jazzband/tablib/issues/114 (discussion of other tools)
 
-- http://www.codinghorror.com/blog/2007/04/pick-a-license-any-license.html
+- https://web.archive.org/web/20120615223756/http://www.codinghorror.com/blog/2007/04/pick-a-license-any-license.html
 
 
 # Raising Issues
