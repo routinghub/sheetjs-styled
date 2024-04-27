@@ -24,12 +24,12 @@ export function readFile(filename: string, opts?: ParsingOptions): WorkBook;
 /** Attempts to parse data */
 export function read(data: any, opts?: ParsingOptions): WorkBook;
 /** Attempts to write or download workbook data to file */
-export function writeFile(data: WorkBook, filename: string, opts?: WritingOptions): any;
+export function writeFile(data: WorkBook, filename: string, opts?: WritingOptions): void;
 /** Attempts to write or download workbook data to XLSX file */
-export function writeFileXLSX(data: WorkBook, filename: string, opts?: WritingOptions): any;
+export function writeFileXLSX(data: WorkBook, filename: string, opts?: WritingOptions): void;
 /** Attempts to write or download workbook data to file asynchronously */
 type CBFunc = () => void;
-export function writeFileAsync(filename: string, data: WorkBook, opts: WritingOptions | CBFunc, cb?: CBFunc): any;
+export function writeFileAsync(filename: string, data: WorkBook, opts: WritingOptions | CBFunc, cb?: CBFunc): void;
 /** Attempts to write the workbook data */
 export function write(data: WorkBook, opts: WritingOptions): any;
 /** Attempts to write the workbook data as XLSX */
@@ -277,7 +277,7 @@ export interface WritingOptions extends CommonOptions {
      */
     compression?: boolean;
 
-    /** Overwride theme XML when exporting to XLSX/XLSM/XLSB */
+    /** Override theme XML when exporting to XLSX/XLSM/XLSB */
     themeXLSX?: string;
 
     /**

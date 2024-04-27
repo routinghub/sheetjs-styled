@@ -145,7 +145,6 @@ function sheet_add_aoa(_ws/*:?Worksheet*/, data/*:AOA*/, opts/*:?any*/)/*:Worksh
 		if(!data[R]) continue;
 		if(!Array.isArray(data[R])) throw new Error("aoa_to_sheet expects an array of arrays");
 		var __R = _R + R, __Rstr = "" + (__R + 1);
-		//console.log("!!", R, _R, __R);
 		if(dense) {
 			if(!ws["!data"][__R]) ws["!data"][__R] = [];
 			row = ws["!data"][__R];
@@ -168,7 +167,11 @@ function sheet_add_aoa(_ws/*:?Worksheet*/, data/*:AOA*/, opts/*:?any*/)/*:Worksh
 					else if(!o.sheetStubs) continue;
 					else cell.t = 'z';
 				}
-				else if(typeof cell.v === 'number') cell.t = 'n';
+				else if(typeof cell.v === 'number') {
+					if(isFinite(cell.v)) cell.t = 'n';
+					else if(isNaN(cell.v)) { cell.t = 'e'; cell.v = 0x0F; /* #VALUE! */ }
+					else { cell.t = 'e'; cell.v = 0x07; /*# DIV/0 */ }
+				}
 				else if(typeof cell.v === 'boolean') cell.t = 'b';
 				else if(cell.v instanceof Date) {
 					cell.z = o.dateNF || table_fmt[14];
@@ -192,4 +195,3 @@ function sheet_add_aoa(_ws/*:?Worksheet*/, data/*:AOA*/, opts/*:?any*/)/*:Worksh
 	return ws;
 }
 function aoa_to_sheet(data/*:AOA*/, opts/*:?any*/)/*:Worksheet*/ { return sheet_add_aoa(null, data, opts); }
-

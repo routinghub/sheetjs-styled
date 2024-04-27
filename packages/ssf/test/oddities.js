@@ -19,4 +19,12 @@ describe('oddities', function() {
     var chk = function(fmt){ return function(){ SSF.format(fmt,0); }; };
     bad.forEach(function(fmt){assert.throws(chk(fmt));});
   });
+  it('should handle NaN values and infinities', function() {
+    assert.equal(SSF.format('#,##0.0; (#,##0.0); "-"', NaN), " -");
+    assert.equal(SSF.format('#,##0.0; (#,##0.0); "-"', Infinity), " -");
+    assert.equal(SSF.format('#,##0.0; (#,##0.0); "-"', -Infinity), " -");
+    assert.equal(SSF.format('0.00', NaN), "#VALUE!");
+    assert.equal(SSF.format('0.00', Infinity), "#DIV/0!");
+    assert.equal(SSF.format('0.00', -Infinity), "#DIV/0!");
+  });
 });
