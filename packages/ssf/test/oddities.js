@@ -23,8 +23,10 @@ describe('oddities', function() {
     assert.equal(SSF.format('#,##0.0; (#,##0.0); "-"', NaN), " -");
     assert.equal(SSF.format('#,##0.0; (#,##0.0); "-"', Infinity), " -");
     assert.equal(SSF.format('#,##0.0; (#,##0.0); "-"', -Infinity), " -");
-    assert.equal(SSF.format('0.00', NaN), "#VALUE!");
-    assert.equal(SSF.format('0.00', Infinity), "#DIV/0!");
-    assert.equal(SSF.format('0.00', -Infinity), "#DIV/0!");
+		["0.00", "General"].forEach(function(fmt) {
+      assert.equal(SSF.format(fmt, NaN), "#VALUE!");
+      assert.equal(SSF.format(fmt, Infinity), "#DIV/0!");
+      assert.equal(SSF.format(fmt, -Infinity), "#DIV/0!");
+		});
   });
 });

@@ -104,7 +104,7 @@ function sheet_to_json(sheet/*:Worksheet*/, opts/*:?Sheet2JSONOpts*/) {
 }
 
 var qreg = /"/g;
-function make_csv_row(sheet/*:Worksheet*/, r/*:Range*/, R/*:number*/, cols/*:Array<string>*/, fs/*:number*/, rs/*:number*/, FS/*:string*/, o/*:Sheet2CSVOpts*/)/*:?string*/ {
+function make_csv_row(sheet/*:Worksheet*/, r/*:Range*/, R/*:number*/, cols/*:Array<string>*/, fs/*:number*/, rs/*:number*/, FS/*:string*/, w/*:number*/, o/*:Sheet2CSVOpts*/)/*:?string*/ {
 	var isempty = true;
 	var row/*:Array<string>*/ = [], txt = "", rr = encode_row(R);
 	var dense = sheet["!data"] != null;
@@ -117,7 +117,7 @@ function make_csv_row(sheet/*:Worksheet*/, r/*:Range*/, R/*:number*/, cols/*:Arr
 			isempty = false;
 			txt = ''+(o.rawNumbers && val.t == "n" ? val.v : format_cell(val, null, o));
 			for(var i = 0, cc = 0; i !== txt.length; ++i) if((cc = txt.charCodeAt(i)) === fs || cc === rs || cc === 34 || o.forceQuotes) {txt = "\"" + txt.replace(qreg, '""') + "\""; break; }
-			if(txt == "ID") txt = '"ID"';
+			if(txt == "ID" && w == 0 && row.length == 0) txt = '"ID"';
 		} else if(val.f != null && !val.F) {
 			isempty = false;
 			txt = '=' + val.f; if(txt.indexOf(",") >= 0) txt = '"' + txt.replace(qreg, '""') + '"';
@@ -144,7 +144,7 @@ function sheet_to_csv(sheet/*:Worksheet*/, opts/*:?Sheet2CSVOpts*/)/*:string*/ {
 	var w = 0;
 	for(var R = r.s.r; R <= r.e.r; ++R) {
 		if ((rowinfo[R]||{}).hidden) continue;
-		row = make_csv_row(sheet, r, R, cols, fs, rs, FS, o);
+		row = make_csv_row(sheet, r, R, cols, fs, rs, FS, w, o);
 		if(row == null) { continue; }
 		if(row || (o.blankrows !== false)) out.push((w++ ? RS : "") + row);
 	}

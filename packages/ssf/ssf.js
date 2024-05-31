@@ -250,6 +250,7 @@ var general_fmt_num = (function make_general_fmt_num() {
 	}
 
 	function general_fmt_num_base(v) {
+		if(!isFinite(v)) return isNaN(v) ? "#VALUE!" : "#DIV/0!";
 		var V = Math.floor(Math.log(Math.abs(v))*Math.LOG10E), o;
 
 		if(V >= -4 && V <= -1) o = v.toPrecision(10+V);

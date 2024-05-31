@@ -1186,9 +1186,12 @@ function write_ws_xlml_table(ws/*:Worksheet*/, opts, idx/*:number*/, wb/*:Workbo
 		o.push(writextag("Column",null,k));
 	});
 	var dense = ws["!data"] != null;
+	var addr = {r:0,c:0};
 	for(var R = range.s.r; R <= range.e.r; ++R) {
 		var row = [write_ws_xlml_row(R, (ws['!rows']||[])[R])];
+		addr.r = R;
 		for(var C = range.s.c; C <= range.e.c; ++C) {
+			addr.c = C;
 			var skip = false;
 			for(mi = 0; mi != marr.length; ++mi) {
 				if(marr[mi].s.c > C) continue;
@@ -1199,7 +1202,6 @@ function write_ws_xlml_table(ws/*:Worksheet*/, opts, idx/*:number*/, wb/*:Workbo
 				break;
 			}
 			if(skip) continue;
-			var addr = {r:R,c:C};
 			var ref = encode_col(C) + encode_row(R), cell = dense ? (ws["!data"][R]||[])[C] : ws[ref];
 			row.push(write_ws_xlml_cell(cell, ref, ws, opts, idx, wb, addr));
 		}
@@ -1223,7 +1225,7 @@ function write_ws_xlml(idx/*:number*/, opts, wb/*:Workbook*/)/*:string*/ {
 	/* WorksheetOptions */
 	o.push(write_ws_xlml_wsopts(ws, opts, idx, wb));
 
-	if(ws["!autofilter"]) o.push('<AutoFilter x:Range="' + a1_to_rc(fix_range(ws["!autofilter"].ref), {r:0,c:0}) + '" xmlns="urn:schemas-microsoft-com:office:excel"></AutoFilter>');
+	if(ws && ws["!autofilter"]) o.push('<AutoFilter x:Range="' + a1_to_rc(fix_range(ws["!autofilter"].ref), {r:0,c:0}) + '" xmlns="urn:schemas-microsoft-com:office:excel"></AutoFilter>');
 
 	return o.join("");
 }
@@ -1242,11 +1244,10 @@ function write_xlml(wb, opts)/*:string*/ {
 	d.push(write_props_xlml(wb, opts));
 	d.push(write_wb_xlml(wb, opts));
 	d.push("");
-	d.push("");
+	d.push(write_names_xlml(wb, opts));
 	for(var i = 0; i < wb.SheetNames.length; ++i)
 		d.push(writextag("Worksheet", write_ws_xlml(i, opts, wb), {"ss:Name":escapexml(wb.SheetNames[i])}));
 	d[2] = write_sty_xlml(wb, opts);
-	d[3] = write_names_xlml(wb, opts);
 	return XML_HEADER + writextag("Workbook", d.join(""), {
 		'xmlns':      XLMLNS.ss,
 		'xmlns:o':    XLMLNS.o,

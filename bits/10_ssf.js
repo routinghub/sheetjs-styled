@@ -243,6 +243,7 @@ function SSF_large_exp(v/*:number*/)/*:string*/ {
 }
 
 function SSF_general_num(v/*:number*/)/*:string*/ {
+	if(!isFinite(v)) return isNaN(v) ? "#VALUE!" : "#DIV/0!";
 	var V = Math.floor(Math.log(Math.abs(v))*Math.LOG10E), o;
 
 	if(V >= -4 && V <= -1) o = v.toPrecision(10+V);
