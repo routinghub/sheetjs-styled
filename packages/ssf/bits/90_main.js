@@ -42,7 +42,7 @@ function format(fmt/*:string|number*/,v/*:any*/,o/*:?any*/) {
 	if(isgeneral(f[1])) return general_fmt(v, o);
 	if(v === true) v = "TRUE"; else if(v === false) v = "FALSE";
 	else if(v === "" || v == null) return "";
-	else if(isNaN(v) && f[1].indexOf("0") > -1) return "#VALUE!";
+	else if(isNaN(v) && f[1].indexOf("0") > -1) return "#NUM!";
 	else if(!isFinite(v) && f[1].indexOf("0") > -1) return "#DIV/0!";
 	return eval_fmt(f[1], v, o, f[0]);
 }

@@ -4,6 +4,13 @@ This log is intended to keep track of backwards-incompatible changes, including
 but not limited to API changes and file location changes.  Minor behavioral
 changes may not be included if they are not expected to break existing code.
 
+## v0.20.3
+
+* More precise treatment of infinite and NaN values
+* XLML Streaming Write
+* Parse `Int8Array` objects (for compatibility with JS engines in Java)
+* CSV Export only quote leading ID (h/t @lako12)
+
 ## v0.20.2
 
 * Reworked parsing methods to avoid slow regexes (CVE-2024-22363)

@@ -119,6 +119,7 @@ function write_json_stream(sheet/*:Worksheet*/, opts/*:?Sheet2CSVOpts*/) {
 function write_xlml_stream(wb/*:Workbook*/, o/*:?Sheet2XLMLOpts*/) {
 	var stream = _Readable();
 	var opts = o == null ? {} : o;
+	var stride = +opts.stride || 10;
 	if(!wb.SSF) wb.SSF = dup(table_fmt);
 	if(wb.SSF) {
 		make_ssf(); SSF_load_table(wb.SSF);
@@ -205,7 +206,7 @@ function write_xlml_stream(wb/*:Workbook*/, o/*:?Sheet2XLMLOpts*/) {
 
 		/* worksheet intramble */
 		case 4: {
-			if(R < 0 || R > range.e.r) { stream.push(T ? "</Table>" : ""); return void (stage = 5); }
+			if(R < 0 || R > range.e.r) { if(T) stream.push("</Table>"); return void (stage = 5); }
 
 			if(R <= range.s.r) {
 				if(ws['!cols']) ws['!cols'].forEach(function(n, i) {
@@ -223,8 +224,8 @@ function write_xlml_stream(wb/*:Workbook*/, o/*:?Sheet2XLMLOpts*/) {
 				addr.r = addr.c = 0;
 			}
 
-			/* process 10 rows per invocation */
-			for(var cnt = 0; R <= range.e.r && cnt < 10; ++R, ++cnt) {
+			/* process `stride` rows per invocation */
+			for(var cnt = 0; R <= range.e.r && cnt < stride; ++R, ++cnt) {
 				var row = [write_ws_xlml_row(R, (ws['!rows']||[])[R])];
 				addr.r = R;
 				if(!(dense && !darr[R])) for(var C = range.s.c; C <= range.e.c; ++C) {
@@ -243,10 +244,8 @@ function write_xlml_stream(wb/*:Workbook*/, o/*:?Sheet2XLMLOpts*/) {
 					row.push(write_ws_xlml_cell(cell, ref, ws, opts, wsidx, wb, addr));
 				}
 				row.push("</Row>");
-				if(row.length > 2) {
-					if(!T) { T = true; stream.push("<Table>"); }
-					stream.push(row.join(""));
-				}
+				if(!T) { T = true; stream.push("<Table>"); }
+				stream.push(row.join(""));
 			}
 		} break;
 

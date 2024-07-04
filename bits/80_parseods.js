@@ -247,7 +247,7 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 		var Sheets = {}, SheetNames/*:Array<string>*/ = [];
 		var ws = ({}/*:any*/); if(opts.dense) ws["!data"] = [];
 		var Rn, q/*:: :any = ({t:"", v:null, z:null, w:"",c:[],}:any)*/;
-		var ctag = ({value:""}/*:any*/);
+		var ctag = ({value:""}/*:any*/), ctag2 = ({}/*:any*/);
 		var textp = "", textpidx = 0, textptag/*:: = {}*/, oldtextp = "", oldtextpidx = 0;
 		var textR = [], oldtextR = [];
 		var R = -1, C = -1, range = {s: {r:1000000,c:10000000}, e: {r:0, c:0}};
@@ -341,6 +341,7 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 					if(R < range.s.r) range.s.r = R;
 					if(rptR > range.e.r) range.e.r = rptR;
 					ctag = parsexmltag(Rn[0], false);
+					ctag2 = parsexmltagraw(Rn[0], true);
 					comments = []; comment = ({}/*:any*/);
 					q = ({t:ctag['数据类型'] || ctag['value-type'], v:null/*:: , z:null, w:"",c:[]*/}/*:any*/);
 					if(ctag["style-name"] && styles[ctag["style-name"]]) q.z = styles[ctag["style-name"]];
@@ -394,6 +395,9 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 					}
 				} else {
 					isstub = false;
+					if(ctag2['calcext:value-type'] == "error" && RBErr[textp] != null) {
+						q.t = 'e'; q.w = textp; q.v = RBErr[textp];
+					}
 					if(q.t === 's') {
 						q.v = textp || '';
 						if(textR.length) q.R = textR;

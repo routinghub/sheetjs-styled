@@ -1144,7 +1144,13 @@ function write_ws_xlml_cell(cell, ref/*:string*/, ws, opts, idx/*:number*/, wb, 
 	var t = "", p = "";
 	switch(cell.t) {
 		case 'z': if(!opts.sheetStubs) return ""; break;
-		case 'n': t = 'Number'; p = String(cell.v); break;
+		case 'n': {
+			if(!isFinite(cell.v)) {
+				t = 'Error'; p = BErr[isNaN(cell.v) ? 0x24 : 0x07];
+			} else {
+				t = 'Number'; p = String(cell.v);
+			}
+		} break;
 		case 'b': t = 'Boolean'; p = (cell.v ? "1" : "0"); break;
 		case 'e': t = 'Error'; p = BErr[cell.v]; break;
 		case 'd': t = 'DateTime'; p = new Date(cell.v).toISOString(); if(cell.z == null) cell.z = cell.z || table_fmt[14]; break;

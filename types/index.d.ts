@@ -836,6 +836,14 @@ export interface Sheet2JSONOpts extends DateNFOption {
     UTC?: boolean;
 }
 
+export interface Sheet2FormulaOpts {
+    /**
+     * If false, only export cells with formulae.
+     * By default, synthetic formulae are generated for each cell.
+     */
+    values?: boolean;
+}
+
 export interface UTCDateOption {
     /**
      * If true, dates are interpreted using the UTC methods
@@ -934,7 +942,7 @@ export interface XLSX$Utils {
     sheet_to_html(worksheet: WorkSheet, options?: Sheet2HTMLOpts): string;
 
     /** Generates a list of the formulae (with value fallbacks) */
-    sheet_to_formulae(worksheet: WorkSheet): string[];
+    sheet_to_formulae(worksheet: WorkSheet, options?: Sheet2FormulaOpts): string[];
 
     /* --- Cell Address Utilities --- */
 
@@ -1020,14 +1028,38 @@ export interface XLSX$Consts {
     SHEET_VERYHIDDEN: 2;
 }
 
-/** NODE ONLY! these return Readable Streams */
+export interface StrideOption {
+    /** Number of rows to write per step */
+    stride?: number;
+}
+
+export interface XLMLStreamOpts extends WritingOptions, StrideOption {}
+
+/**
+ * Streaming write methods
+ *
+ * These methods are directly compatible with NodeJS `stream.Readable` API
+ *
+ * Web Streams (modern browsers) can play nice with NodeJS streams. See the Web
+ * Demo at https://docs.sheetjs.com/docs/demos/bigdata/worker#streaming-write
+ *
+ * NOTE: These methods are not included in the `xlsx.mini.min.js` build!
+ */
 export interface StreamUtils {
+    /** Set `Readable` (for environments that do not support NodeJS Streams) */
+    set_readable(Readable: any): void;
+
+    /* --- Worksheet writers --- */
+
     /** CSV output stream, generate one line at a time */
     to_csv(sheet: WorkSheet, opts?: Sheet2CSVOpts): any;
     /** HTML output stream, generate one line at a time */
     to_html(sheet: WorkSheet, opts?: Sheet2HTMLOpts): any;
     /** JSON object stream, generate one row at a time */
     to_json(sheet: WorkSheet, opts?: Sheet2JSONOpts): any;
-    /** Set `Readable` (internal) */
-    set_readable(Readable: any): void;
+
+    /* --- Workbook writers --- */
+
+    /** XLML output string stream (bookType `xlml`) */
+    to_xlml(data: WorkBook, opts?: XLMLStreamOpts): any;
 }

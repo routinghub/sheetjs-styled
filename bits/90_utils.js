@@ -159,7 +159,7 @@ function sheet_to_txt(sheet/*:Worksheet*/, opts/*:?Sheet2CSVOpts*/) {
 	return String.fromCharCode(255) + String.fromCharCode(254) + o;
 }
 
-function sheet_to_formulae(sheet/*:Worksheet*/)/*:Array<string>*/ {
+function sheet_to_formulae(sheet/*:Worksheet*/, opts/*:?Sheet2FormulaOpts*/)/*:Array<string>*/ {
 	var y = "", x, val="";
 	if(sheet == null || sheet["!ref"] == null) return [];
 	var r = safe_decode_range(sheet['!ref']), rr = "", cols/*:Array<string>*/ = [], C;
@@ -180,6 +180,7 @@ function sheet_to_formulae(sheet/*:Worksheet*/)/*:Array<string>*/ {
 				if(y.indexOf(":") == -1) y = y + ":" + y;
 			}
 			if(x.f != null) val = x.f;
+			else if(opts && opts.values === false) continue;
 			else if(x.t == 'z') continue;
 			else if(x.t == 'n' && x.v != null) val = "" + x.v;
 			else if(x.t == 'b') val = x.v ? "TRUE" : "FALSE";

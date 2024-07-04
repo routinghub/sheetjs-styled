@@ -119,7 +119,7 @@ function sheet_add_aoa(_ws/*:?Worksheet*/, data/*:AOA*/, opts/*:?any*/)/*:Worksh
 	var o = opts || {};
 	var dense = _ws ? (_ws["!data"] != null) : o.dense;
 	if(DENSE != null && dense == null) dense = DENSE;
-	var ws/*:Worksheet*/ = _ws || ({}/*:any*/);
+	var ws/*:Worksheet*/ = _ws || (dense ? ({"!data": []}) : ({}/*:any*/));
 	if(dense && !ws["!data"]) ws["!data"] = [];
 	var _R = 0, _C = 0;
 	if(ws && o.origin != null) {
@@ -144,23 +144,24 @@ function sheet_add_aoa(_ws/*:?Worksheet*/, data/*:AOA*/, opts/*:?any*/)/*:Worksh
 	for(var R = 0; R != data.length; ++R) {
 		if(!data[R]) continue;
 		if(!Array.isArray(data[R])) throw new Error("aoa_to_sheet expects an array of arrays");
-		var __R = _R + R, __Rstr = "" + (__R + 1);
+		var __R = _R + R;
 		if(dense) {
 			if(!ws["!data"][__R]) ws["!data"][__R] = [];
 			row = ws["!data"][__R];
 		}
-		for(var C = 0; C != data[R].length; ++C) {
-			if(typeof data[R][C] === 'undefined') continue;
-			var cell/*:Cell*/ = ({v: data[R][C] }/*:any*/);
+		var data_R = data[R];
+		for(var C = 0; C != data_R.length; ++C) {
+			if(typeof data_R[C] === 'undefined') continue;
+			var cell/*:Cell*/ = ({v: data_R[C], t:"" }/*:any*/);
 			var __C = _C + C;
 			if(range.s.r > __R) range.s.r = __R;
 			if(range.s.c > __C) range.s.c = __C;
 			if(range.e.r < __R) range.e.r = __R;
 			if(range.e.c < __C) range.e.c = __C;
 			seen = true;
-			if(data[R][C] && typeof data[R][C] === 'object' && !Array.isArray(data[R][C]) && !(data[R][C] instanceof Date)) cell = data[R][C];
+			if(data_R[C] && typeof data_R[C] === 'object' && !Array.isArray(data_R[C]) && !(data_R[C] instanceof Date)) cell = data_R[C];
 			else {
-				if(Array.isArray(cell.v)) { cell.f = data[R][C][1]; cell.v = cell.v[0]; }
+				if(Array.isArray(cell.v)) { cell.f = data_R[C][1]; cell.v = cell.v[0]; }
 				if(cell.v === null) {
 					if(cell.f) cell.t = 'n';
 					else if(o.nullError) { cell.t = 'e'; cell.v = 0; }
@@ -185,7 +186,7 @@ function sheet_add_aoa(_ws/*:?Worksheet*/, data/*:AOA*/, opts/*:?any*/)/*:Worksh
 				if(row[__C] && row[__C].z) cell.z = row[__C].z;
 				row[__C] = cell;
 			} else {
-				var cell_ref = encode_col(__C) + __Rstr/*:any*/;
+				var cell_ref = encode_col(__C) + (__R + 1)/*:any*/;
 				if(ws[cell_ref] && ws[cell_ref].z) cell.z = ws[cell_ref].z;
 				ws[cell_ref] = cell;
 			}

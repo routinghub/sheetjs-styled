@@ -220,6 +220,7 @@ function parse_fonts(t, styles, themes, opts) {
 				if(y.val == '1') break;
 				y.codepage = CS2CP[parseInt(y.val, 10)];
 				break;
+			case '<charset/>': case '</charset>': break;
 
 			/* 18.?.? color CT_Color */
 			case '<color':

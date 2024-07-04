@@ -250,7 +250,7 @@ var general_fmt_num = (function make_general_fmt_num() {
 	}
 
 	function general_fmt_num_base(v) {
-		if(!isFinite(v)) return isNaN(v) ? "#VALUE!" : "#DIV/0!";
+		if(!isFinite(v)) return isNaN(v) ? "#NUM!" : "#DIV/0!";
 		var V = Math.floor(Math.log(Math.abs(v))*Math.LOG10E), o;
 
 		if(V >= -4 && V <= -1) o = v.toPrecision(10+V);
@@ -984,7 +984,7 @@ function format(fmt,v,o) {
 	if(isgeneral(f[1])) return general_fmt(v, o);
 	if(v === true) v = "TRUE"; else if(v === false) v = "FALSE";
 	else if(v === "" || v == null) return "";
-	else if(isNaN(v) && f[1].indexOf("0") > -1) return "#VALUE!";
+	else if(isNaN(v) && f[1].indexOf("0") > -1) return "#NUM!";
 	else if(!isFinite(v) && f[1].indexOf("0") > -1) return "#DIV/0!";
 	return eval_fmt(f[1], v, o, f[0]);
 }
