@@ -1851,9 +1851,9 @@ Deno.test('roundtrip features', async function(t) {
 		assert.assert(wb7.Workbook?.WBProps?.date1904);
 	}); });
 
-	await t.step('should handle numeric NaN and Infinity', async function(t) {[
+	await t.step('should handle numeric NaN and Infinity', async function(t) {([
 		"xlsx", "xlsm", "xlsb", "xls", "biff5", "biff4", "biff3", "biff2", "xlml", "csv", "txt", "sylk", "html", "rtf", "prn", "eth", "ods", "fods"
-	].forEach(function(ext) {
+	] as Array<X.BookType>).forEach(function(ext) {
 		var ws: X.DenseWorkSheet = {
 			"!data": [
 				[ { t: "s", v: "Inf+" }, { t: "n", v: Infinity } ],
@@ -2630,7 +2630,7 @@ Deno.test('HTML', async function(t) {
 		});
 	});
 	if(domtest) await t.step('should handle numeric NaN and Infinity', async function(t) {
-		var ws = {
+		var ws: X.DenseWorkSheet = {
 			"!data": [
 				[ { t: "s", v: "Inf+" }, { t: "n", v: Infinity } ],
 				[ { t: "s", v: "Inf-" }, { t: "n", v: -Infinity } ],
@@ -2717,14 +2717,14 @@ Deno.test('dense mode', async function(t) {
 	await t.step('read', async function(t) {
 		ILPaths.forEach(function(p) {
 			var wb = X.read(fs.readFileSync(p), {type: TYPE, WTF: true});
-			var ws = wb.Sheets[wb.SheetNames[0]];
+			var ws: X.WorkSheet = wb.Sheets[wb.SheetNames[0]];
 			assert.equal(ws["A1"].v, "Link to Sheet2");
 			assert.assert(!ws["!data"]);
 
 			wb = X.read(fs.readFileSync(p), {type: TYPE, WTF: true, dense: true});
 			ws = wb.Sheets[wb.SheetNames[0]];
 			assert.assert(!ws["A1"]);
-			assert.equal(ws["!data"][0][0].v, "Link to Sheet2");
+			assert.equal(ws["!data"]?.[0][0].v, "Link to Sheet2");
 		});
 		if(!browser) artifax.forEach(function(p) {
 			var wb = X.read(fs.readFileSync(p), {type: TYPE, WTF: true});
@@ -2735,7 +2735,8 @@ Deno.test('dense mode', async function(t) {
 			wb = X.read(fs.readFileSync(p), {type: TYPE, WTF: true, dense: true});
 			ws = wb.Sheets[wb.SheetNames[0]];
 			assert.assert(!ws["A1"]);
-			assert.assert(ws["!data"][0][0]);
+			assert.assert(!!ws["!data"]);
+			assert.assert(ws["!data"]?.[0][0]);
 		});
 	});
 	await t.step('aoa_to_sheet', async function(t) {
@@ -2743,28 +2744,28 @@ Deno.test('dense mode', async function(t) {
 		var sp = X.utils.aoa_to_sheet(aoa); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
 		sp = X.utils.aoa_to_sheet(aoa, {}); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
 		sp = X.utils.aoa_to_sheet(aoa, {dense: false}); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
-		var ds = X.utils.aoa_to_sheet(aoa, {dense: true}); assert.equal(ds["!data"][1][0].v, 5433795); assert.assert(!ds["A2"]);
+		var ds = X.utils.aoa_to_sheet(aoa, {dense: true}); assert.equal(ds["!data"]?.[1][0].v, 5433795); assert.assert(!ds["A2"]);
 	});
 	await t.step('json_to_sheet', async function(t) {
 		var json = [{"SheetJS": 5433795}];
 		var sp = X.utils.json_to_sheet(json); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
 		sp = X.utils.json_to_sheet(json, {}); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
 		sp = X.utils.json_to_sheet(json, {dense: false}); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
-		var ds = X.utils.json_to_sheet(json, {dense: true}); assert.equal(ds["!data"][1][0].v, 5433795); assert.assert(!ds["A2"]);
+		var ds = X.utils.json_to_sheet(json, {dense: true}); assert.equal(ds["!data"]?.[1][0].v, 5433795); assert.assert(!ds["A2"]);
 	});
 	await t.step('sheet_add_aoa', async function(t) {
 		var aoa = [["SheetJS"]];
 		var sp = X.utils.aoa_to_sheet(aoa); X.utils.sheet_add_aoa(sp, [[5433795]], {origin:-1}); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
 		sp = X.utils.aoa_to_sheet(aoa); X.utils.sheet_add_aoa(sp, [[5433795]], {origin:-1, dense: true}); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
-		var ds = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_aoa(ds, [[5433795]], {origin:-1}); assert.equal(ds["!data"][1][0].v, 5433795); assert.assert(!ds["A2"]);
-		ds = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_aoa(ds, [[5433795]], {origin:-1, dense: true}); assert.equal(ds["!data"][1][0].v, 5433795); assert.assert(!ds["A2"]);
+		var ds:X.WorkSheet = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_aoa(ds, [[5433795]], {origin:-1}); assert.equal(ds["!data"]?.[1][0].v, 5433795); assert.assert(!ds["A2"]);
+		ds = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_aoa(ds, [[5433795]], {origin:-1, dense: true}); assert.equal(ds["!data"]?.[1][0].v, 5433795); assert.assert(!ds["A2"]);
 	});
 	await t.step('sheet_add_json', async function(t) {
 		var aoa = [["SheetJS"]];
-		var sp: X.SparseSheet = X.utils.aoa_to_sheet(aoa); X.utils.sheet_add_json(sp, [{X:5433795}], {origin:-1, skipHeader:1}); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
-		sp = X.utils.aoa_to_sheet(aoa); X.utils.sheet_add_json(sp, [{X:5433795}], {origin:-1, skipHeader: 1, dense: true}); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
-		var ds = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_json(ds, [{X:5433795}], {origin:-1, skipHeader: 1}); assert.equal(ds["!data"]?.[1][0].v, 5433795); assert.assert(!ds["A2"]);
-		ds = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_json(ds, [{X:5433795}], {origin:-1, skipHeader: 1, dense: true}); assert.equal(ds["!data"]?.[1][0].v, 5433795); assert.assert(!ds["A2"]);
+		var sp = X.utils.aoa_to_sheet(aoa); X.utils.sheet_add_json(sp, [{X:5433795}], {origin:-1, skipHeader:true}); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
+		sp = X.utils.aoa_to_sheet(aoa); X.utils.sheet_add_json(sp, [{X:5433795}], {origin:-1, skipHeader: true, dense: true}); assert.equal(sp["A2"].v, 5433795); assert.assert(!sp["!data"]);
+		var ds:X.WorkSheet = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_json(ds, [{X:5433795}], {origin:-1, skipHeader: true}); assert.equal(ds["!data"]?.[1][0].v, 5433795); assert.assert(!ds["A2"]);
+		ds = X.utils.aoa_to_sheet(aoa, {dense: true}); X.utils.sheet_add_json(ds, [{X:5433795}], {origin:-1, skipHeader: true, dense: true}); assert.equal(ds["!data"]?.[1][0].v, 5433795); assert.assert(!ds["A2"]);
 	});
 	for(var ofmti = 0; ofmti < ofmt.length; ++ofmti) { var f = ofmt[ofmti];
 	await t.step('write ' + f, async function(t) {
