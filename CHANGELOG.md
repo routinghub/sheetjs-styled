@@ -6,6 +6,7 @@ changes may not be included if they are not expected to break existing code.
 
 ## v0.20.3
 
+* Correct parsing of NUMBERS and ODS merge cells (h/t @s-ashwin)
 * More precise treatment of infinite and NaN values
 * XLML Streaming Write
 * Parse `Int8Array` objects (for compatibility with JS engines in Java)

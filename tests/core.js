@@ -2572,6 +2572,8 @@ function get_dom_element(html) {
 		domelt.innerHTML = html;
 		if(document.body) document.body.appendChild(domelt);
 		inserted_dom_elements.push(domelt);
+		var elts = domelt.getElementsByTagName("TABLE");
+		if(elts && elts[0]) return elts[0];
 		return domelt.children[0];
 	}
 	if(!JSDOM) throw new Error("Browser test fail");

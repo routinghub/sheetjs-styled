@@ -1117,7 +1117,7 @@ function s5s_to_iwa_comment(s5s) {
   return out;
 }
 function parse_TST_TableModelArchive(M, root, ws, opts) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
   var pb = parse_shallow(root.data);
   var range = { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
   range.e.r = (varint_to_i32(pb[6][0].data) >>> 0) - 1;
@@ -1196,11 +1196,11 @@ function parse_TST_TableModelArchive(M, root, ws, opts) {
       };
     });
   }
-  if ((_k = pb[47]) == null ? void 0 : _k[0]) {
+  if (!((_k = ws["!merges"]) == null ? void 0 : _k.length) && ((_l = pb[47]) == null ? void 0 : _l[0])) {
     var merge_owner = parse_shallow(pb[47][0].data);
-    if ((_l = merge_owner[2]) == null ? void 0 : _l[0]) {
+    if ((_m = merge_owner[2]) == null ? void 0 : _m[0]) {
       var formula_store = parse_shallow(merge_owner[2][0].data);
-      if (((_m = formula_store[3]) == null ? void 0 : _m[0]) && !ws["!merges"]) {
+      if ((_n = formula_store[3]) == null ? void 0 : _n[0]) {
         ws["!merges"] = mappa(formula_store[3], function(u) {
           var _a2, _b2, _c2, _d2, _e2;
           var formula_pair = parse_shallow(u);

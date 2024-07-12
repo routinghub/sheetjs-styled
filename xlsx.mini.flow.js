@@ -4,7 +4,7 @@
 /*global global, exports, module, require:false, process:false, Buffer:false, ArrayBuffer:false, DataView:false, Deno:false, Set:false, Float32Array:false */
 var XLSX = {};
 function make_xlsx_lib(XLSX){
-XLSX.version = '0.20.2strm';
+XLSX.version = '0.20.3';
 var current_codepage = 1200, current_ansi = 1252;
 /*:: declare var cptable:any; */
 /*global cptable:true, window */
@@ -7435,10 +7435,12 @@ function parse_fonts(t, styles, themes, opts) {
 			/* 18.8.2  b CT_BooleanProperty */
 			case '<b': font.bold = y.val ? parsexmlbool(y.val) : 1; break;
 			case '<b/>': font.bold = 1; break;
+			case '</b>': case '</b': break;
 
 			/* 18.8.26 i CT_BooleanProperty */
 			case '<i': font.italic = y.val ? parsexmlbool(y.val) : 1; break;
 			case '<i/>': font.italic = 1; break;
+			case '</i>': case '</i': break;
 
 			/* 18.4.13 u CT_UnderlineProperty */
 			case '<u':
@@ -7450,49 +7452,55 @@ function parse_fonts(t, styles, themes, opts) {
 					case "doubleAccounting": font.underline = 0x22; break;
 				} break;
 			case '<u/>': font.underline = 1; break;
+			case '</u>': case '</u': break;
 
 			/* 18.4.10 strike CT_BooleanProperty */
 			case '<strike': font.strike = y.val ? parsexmlbool(y.val) : 1; break;
 			case '<strike/>': font.strike = 1; break;
+			case '</strike>': case '</strike': break;
 
 			/* 18.4.2  outline CT_BooleanProperty */
 			case '<outline': font.outline = y.val ? parsexmlbool(y.val) : 1; break;
 			case '<outline/>': font.outline = 1; break;
+			case '</outline>': case '</outline': break;
 
 			/* 18.8.36 shadow CT_BooleanProperty */
 			case '<shadow': font.shadow = y.val ? parsexmlbool(y.val) : 1; break;
 			case '<shadow/>': font.shadow = 1; break;
+			case '</shadow>': case '</shadow': break;
 
 			/* 18.8.12 condense CT_BooleanProperty */
 			case '<condense': font.condense = y.val ? parsexmlbool(y.val) : 1; break;
 			case '<condense/>': font.condense = 1; break;
+			case '</condense>': case '</condense': break;
 
 			/* 18.8.17 extend CT_BooleanProperty */
 			case '<extend': font.extend = y.val ? parsexmlbool(y.val) : 1; break;
 			case '<extend/>': font.extend = 1; break;
+			case '</extend>': case '</extend': break;
 
 			/* 18.4.11 sz CT_FontSize */
 			case '<sz': if(y.val) font.sz = +y.val; break;
-			case '<sz/>': case '</sz>': break;
+			case '<sz/>': case '</sz>': case '</sz': break;
 
 			/* 18.4.14 vertAlign CT_VerticalAlignFontProperty */
 			case '<vertAlign': if(y.val) font.vertAlign = y.val; break;
-			case '<vertAlign/>': case '</vertAlign>': break;
+			case '<vertAlign/>': case '</vertAlign>': case '</vertAlign': break;
 
 			/* 18.8.18 family CT_FontFamily */
 			case '<family': if(y.val) font.family = parseInt(y.val,10); break;
-			case '<family/>': case '</family>': break;
+			case '<family/>': case '</family>': case '</family': break;
 
 			/* 18.8.35 scheme CT_FontScheme */
 			case '<scheme': if(y.val) font.scheme = y.val; break;
-			case '<scheme/>': case '</scheme>': break;
+			case '<scheme/>': case '</scheme>': case '</scheme': break;
 
 			/* 18.4.1 charset CT_IntProperty */
 			case '<charset':
 				if(y.val == '1') break;
 				y.codepage = CS2CP[parseInt(y.val, 10)];
 				break;
-			case '<charset/>': case '</charset>': break;
+			case '<charset/>': case '</charset>': case '</charset': break;
 
 			/* 18.?.? color CT_Color */
 			case '<color':
@@ -7515,11 +7523,11 @@ function parse_fonts(t, styles, themes, opts) {
 				}
 
 				break;
-			case '<color/>': case '</color>': break;
+			case '<color/>': case '</color>': case '</color': break;
 
 			/* note: sometimes mc:AlternateContent appears bare */
 			case '<AlternateContent': pass = true; break;
-			case '</AlternateContent>': pass = false; break;
+			case '</AlternateContent>': case '</AlternateContent': pass = false; break;
 
 			/* 18.2.10 extLst CT_ExtensionList ? */
 			case '<extLst': case '<extLst>': case '</extLst>': break;
@@ -10482,10 +10490,18 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 				if(rowpeat < 10) for(i = 0; i < rowpeat; ++i) if(row_ol > 0) rowinfo[R + i] = {level: row_ol};
 				C = -1; break;
 			case 'covered-table-cell': // 9.1.5 <table:covered-table-cell>
-				if(Rn[1] !== '/') ++C;
-				if(opts.sheetStubs) {
-					if(opts.dense) { if(!ws["!data"][R]) ws["!data"][R] = []; ws["!data"][R][C] = {t:'z'}; }
-					else ws[encode_cell({r:R,c:C})] = {t:'z'};
+				if(Rn[1] !== '/') {
+					++C;
+					ctag = parsexmltag(Rn[0], false);
+					colpeat = parseInt(ctag['number-columns-repeated']||"1",10) || 1;
+					if(opts.sheetStubs) {
+						while(colpeat-- > 0) {
+							if(opts.dense) { if(!ws["!data"][R]) ws["!data"][R] = []; ws["!data"][R][C] = {t:'z'}; }
+							else ws[encode_cell({r:R,c:C})] = {t:'z'};
+							++C;
+						} --C;
+					}
+					else C += colpeat - 1;
 				}
 				textp = ""; textR = [];
 				break; /* stub */
@@ -10493,7 +10509,7 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 				if(Rn[0].charAt(Rn[0].length-2) === '/') {
 					++C;
 					ctag = parsexmltag(Rn[0], false);
-					colpeat = parseInt(ctag['number-columns-repeated']||"1", 10);
+					colpeat = parseInt(ctag['number-columns-repeated']||"1", 10)||1;
 					q = ({t:'z', v:null/*:: , z:null, w:"",c:[]*/}/*:any*/);
 					if(ctag.formula && opts.cellFormula != false) q.f = ods_to_csf_formula(unescapexml(ctag.formula));
 					if(ctag["style-name"] && styles[ctag["style-name"]]) q.z = styles[ctag["style-name"]];
@@ -10537,10 +10553,12 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 									q.F = arrayf[i][1];
 					}
 					if(ctag['number-columns-spanned'] || ctag['number-rows-spanned']) {
-						mR = parseInt(ctag['number-rows-spanned'],10) || 0;
-						mC = parseInt(ctag['number-columns-spanned'],10) || 0;
-						mrange = {s: {r:R,c:C}, e:{r:R + mR-1,c:C + mC-1}};
-						merges.push(mrange);
+						mR = parseInt(ctag['number-rows-spanned']||"1",10) || 1;
+						mC = parseInt(ctag['number-columns-spanned']||"1",10) || 1;
+						if(mR * mC > 1) {
+							mrange = {s: {r:R,c:C}, e:{r:R + mR-1,c:C + mC-1}};
+							merges.push(mrange);
+						}
 					}
 
 					/* 19.675.2 table:number-columns-repeated */
@@ -10972,7 +10990,6 @@ function parse_fods(data/*:string*/, opts/*:?ParseOpts*/)/*:Workbook*/ {
 	wb.bookType = "fods";
 	return wb;
 }
-
 /* OpenDocument */
 var write_styles_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function() {
 	var master_styles = [
