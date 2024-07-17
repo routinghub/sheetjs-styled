@@ -627,14 +627,14 @@ function parse_xls_props(cfb/*:CFBContainer*/, props, o) {
 	if(DSI && DSI.size > 0) try {
 		var DocSummary = parse_PropertySetStream(DSI, DocSummaryPIDDSI, PSCLSID.DSI);
 		for(var d in DocSummary) props[d] = DocSummary[d];
-	} catch(e) {if(o.WTF) throw e;/* empty */}
+	} catch(e) {if(o.WTF) console.error(e && e.message || e);}
 
 	/* [MS-OSHARED] 2.3.3.2.1 Summary Information Property Set*/
 	var SI = CFB.find(cfb, '/!SummaryInformation');
 	if(SI && SI.size > 0) try {
 		var Summary = parse_PropertySetStream(SI, SummaryPIDSI, PSCLSID.SI);
 		for(var s in Summary) if(props[s] == null) props[s] = Summary[s];
-	} catch(e) {if(o.WTF) throw e;/* empty */}
+	} catch(e) {if(o.WTF) console.error(e && e.message || e);}
 
 	if(props.HeadingPairs && props.TitlesOfParts) {
 		load_props_pairs(props.HeadingPairs, props.TitlesOfParts, props, o);
