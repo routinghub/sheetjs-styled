@@ -31,9 +31,6 @@ encodings for XLS and other legacy spreadsheet formats
 
 - [`dta`](packages/dta): Stata DTA file processor
 
-- [`test_files`](https://github.com/sheetjs/test_files): Test files and various
-plaintext baselines.
-
 ## License
 
 Please consult the attached LICENSE file for details.  All rights not explicitly

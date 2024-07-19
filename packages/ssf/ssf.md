@@ -1446,7 +1446,7 @@ SSF.load_table = function load_table(tbl/*:{[n:number]:string}*/) { for(var i=0;
 
 ## Fraction Library
 
-The implementation is from [our frac library](https://github.com/SheetJS/frac/):
+The implementation is from [our frac library](https://git.sheetjs.com/SheetJS/frac/):
 
 ```js>bits/30_frac.js
 function frac(x, D, mixed) {
