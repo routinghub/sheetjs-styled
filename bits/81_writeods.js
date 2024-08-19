@@ -214,7 +214,9 @@ var write_content_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function
 	var write_ws = function(ws, wb/*:Workbook*/, i/*:number*/, opts, nfs, date1904)/*:string*/ {
 		/* Section 9 Tables */
 		var o/*:Array<string>*/ = [];
-		o.push('      <table:table table:name="' + escapexml(wb.SheetNames[i]) + '" table:style-name="ta1">\n');
+		var tstyle = "ta1";
+		if(((((wb||{}).Workbook||{}).Sheets||[])[i]||{}).Hidden) tstyle = "ta2";
+		o.push('      <table:table table:name="' + escapexml(wb.SheetNames[i]) + '" table:style-name="' + tstyle + '">\n');
 		var R=0,C=0, range = decode_range(ws['!ref']||"A1");
 		var marr/*:Array<Range>*/ = ws['!merges'] || [], mi = 0;
 		var dense = ws["!data"] != null;
@@ -361,6 +363,9 @@ var write_content_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function
 		/* table */
 		o.push('  <style:style style:name="ta1" style:family="table" style:master-page-name="mp1">\n');
 		o.push('   <style:table-properties table:display="true" style:writing-mode="lr-tb"/>\n');
+		o.push('  </style:style>\n');
+		o.push('  <style:style style:name="ta2" style:family="table" style:master-page-name="mp1">\n');
+		o.push('   <style:table-properties table:display="false" style:writing-mode="lr-tb"/>\n');
 		o.push('  </style:style>\n');
 
 		o.push('  <number:date-style style:name="N37" number:automatic-order="true">\n');

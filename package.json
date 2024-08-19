@@ -142,10 +142,7 @@
 		"url": "https://git.sheetjs.com/SheetJS/sheetjs"
 	},
 	"scripts": {
-		"pretest": "npm run lint",
-		"test": "npm run tests-only",
-		"pretest-only": "git submodule init && git submodule update",
-		"tests-only": "make travis",
+		"test": "make travis",
 		"build": "make",
 		"lint": "make fullint",
 		"dtslint": "dtslint types"

@@ -92,6 +92,7 @@ function make_html_row(ws/*:Worksheet*/, r/*:Range*/, R/*:number*/, o/*:Sheet2HT
 			// note: data-v is unaffected by the timezone interpretation
 			if(cell.v != null) sp["data-v"] = escapehtml(cell.v instanceof Date ? cell.v.toISOString() : cell.v);
 			if(cell.z != null) sp["data-z"] = cell.z;
+			if(cell.f != null) sp["data-f"] = escapehtml(cell.f);
 			if(cell.l && (cell.l.Target || "#").charAt(0) != "#") w = '<a href="' + escapehtml(cell.l.Target) +'">' + w + '</a>';
 		}
 		sp.id = (o.id || "sjs") + "-" + coord;
@@ -179,6 +180,7 @@ function sheet_add_dom(ws/*:Worksheet*/, table/*:HTMLElement*/, _opts/*:?any*/)/
 			if (opts.display && is_dom_element_hidden(elt)) continue;
 			var v/*:?string*/ = elt.hasAttribute('data-v') ? elt.getAttribute('data-v') : elt.hasAttribute('v') ? elt.getAttribute('v') : htmldecode(elt.innerHTML);
 			var z/*:?string*/ = elt.getAttribute('data-z') || elt.getAttribute('z');
+			var f/*:?string*/ = elt.hasAttribute('data-f') ? elt.getAttribute('data-f') : elt.hasAttribute('f') ? elt.getAttribute('f') : null;
 			for(midx = 0; midx < merges.length; ++midx) {
 				var m/*:Range*/ = merges[midx];
 				if(m.s.c == C + or_C && m.s.r < R + or_R && R + or_R <= m.e.r) { C = m.e.c+1 - or_C; midx = -1; }
@@ -210,6 +212,7 @@ function sheet_add_dom(ws/*:Worksheet*/, table/*:HTMLElement*/, _opts/*:?any*/)/
 				l = Aelts[Aelti].getAttribute("href"); if(l.charAt(0) != "#") break;
 			}
 			if(l && l.charAt(0) != "#" &&	l.slice(0, 11).toLowerCase() != 'javascript:') o.l = ({ Target: l });
+			if(f != null) o.f = f;
 			if(dense) { if(!ws["!data"][R + or_R]) ws["!data"][R + or_R] = []; ws["!data"][R + or_R][C + or_C] = o; }
 			else ws[encode_cell({c:C + or_C, r:R + or_R})] = o;
 			if(range.e.c < C + or_C) range.e.c = C + or_C;

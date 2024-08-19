@@ -252,11 +252,11 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 		var textR = [], oldtextR = [];
 		var R = -1, C = -1, range = {s: {r:1000000,c:10000000}, e: {r:0, c:0}};
 		var row_ol = 0;
-		var number_format_map = _nfm || {}, styles = {};
+		var number_format_map = _nfm || {}, styles = {}, tstyles = {};
 		var merges/*:Array<Range>*/ = [], mrange = {}, mR = 0, mC = 0;
 		var rowinfo/*:Array<RowInfo>*/ = [], rowpeat = 1, colpeat = 1;
 		var arrayf/*:Array<[Range, string]>*/ = [];
-		var WB = {Names:[], WBProps:{}};
+		var WB = {Names:[], WBProps:{}, Sheets:[]};
 		var atag = ({}/*:any*/);
 		var _Ref/*:[string, string]*/ = ["", ""];
 		var comments/*:Array<Comment>*/ = [], comment/*:Comment*/ = ({}/*:any*/);
@@ -282,6 +282,10 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 					if(typeof JSON !== 'undefined') JSON.stringify(sheetag);
 					SheetNames.push(sheetag.name);
 					Sheets[sheetag.name] = ws;
+					WB.Sheets.push({
+						/* TODO: CodeName */
+						Hidden: (tstyles[sheetag["style-name"]] && tstyles[sheetag["style-name"]]["display"] ? (parsexmlbool(tstyles[sheetag["style-name"]]["display"]) ? 0 : 1) : 0)
+					});
 					intable = false;
 				}
 				else if(Rn[0].charAt(Rn[0].length-2) !== '/') {
@@ -529,12 +533,16 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 			case 'style': { // 16.2 <style:style>
 				var styletag = parsexmltag(Rn[0], false);
 				if(styletag["family"] == "table-cell" && number_format_map[styletag["data-style-name"]]) styles[styletag["name"]] = number_format_map[styletag["data-style-name"]];
+				else if(styletag["family"] == "table") tstyles[styletag["name"]] = styletag;
 			} break;
 			case 'map': break; // 16.3 <style:map>
 			case 'font-face': break; // 16.21 <style:font-face>
 
 			case 'paragraph-properties': break; // 17.6 <style:paragraph-properties>
-			case 'table-properties': break; // 17.15 <style:table-properties>
+			case 'table-properties': { // 17.15 <style:table-properties>
+				var proptag = parsexmltag(Rn[0], false);
+				if(styletag && styletag.family == "table") styletag.display = proptag.display;
+			} break;
 			case 'table-column-properties': break; // 17.16 <style:table-column-properties>
 			case 'table-row-properties': break; // 17.17 <style:table-row-properties>
 			case 'table-cell-properties': break; // 17.18 <style:table-cell-properties>

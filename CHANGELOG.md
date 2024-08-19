@@ -4,6 +4,10 @@ This log is intended to keep track of backwards-incompatible changes, including
 but not limited to API changes and file location changes.  Minor behavioral
 changes may not be included if they are not expected to break existing code.
 
+* Sheet Visibility for ODS / FODS (h/t @edemaine)
+* HTML DOM ingress support formulae (`data-f`)
+* Proper handling of XLSX encoded entities (h/t @inreoh)
+
 ## v0.20.3
 
 * Correct parsing of NUMBERS and ODS merge cells (h/t @s-ashwin)

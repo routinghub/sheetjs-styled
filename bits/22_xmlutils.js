@@ -67,7 +67,7 @@ var rencoding = /*#__PURE__*/evert(encodings);
 // TODO: CP remap (need to read file version to determine OS)
 var unescapexml/*:StringConv*/ = /*#__PURE__*/(function() {
 	/* 22.4.2.4 bstr (Basic String) */
-	var encregex = /&(?:quot|apos|gt|lt|amp|#x?([\da-fA-F]+));/ig, coderegex = /_x([\da-fA-F]{4})_/ig;
+	var encregex = /&(?:quot|apos|gt|lt|amp|#x?([\da-fA-F]+));/ig, coderegex = /_x([\da-fA-F]{4})_/g;
 	function raw_unescapexml(text/*:string*/)/*:string*/ {
 		var s = text + '', i = s.indexOf("<![CDATA[");
 		if(i == -1) return s.replace(encregex, function($$, $1) { return encodings[$$]||String.fromCharCode(parseInt($1,$$.indexOf("x")>-1?16:10))||$$; }).replace(coderegex,function(m,c) {return String.fromCharCode(parseInt(c,16));});

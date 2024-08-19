@@ -1772,8 +1772,8 @@ describe('roundtrip features', function() {
 			['xlsx', paths.svxlsx],
 			['xlsb', paths.svxlsb],
 			['xls', paths.svxls],
-			['biff5', paths.svxls5]
-			// ['ods', paths.svods]
+			['biff5', paths.svxls5],
+			['ods', paths.svods]
 		].forEach(function(w) {
 			it(w[0], function() {
 				var wb1 = X.read(fs.readFileSync(w[1]), {type:TYPE});
@@ -1783,7 +1783,9 @@ describe('roundtrip features', function() {
 				assert.equal(wbs1.length, wbs2.length);
 				for(var i = 0; i < wbs1.length; ++i) {
 					assert.equal(wbs1[i].name, wbs2[i].name);
-					assert.equal(wbs1[i].Hidden, wbs2[i].Hidden);
+					/* NOTE: ODS does not support the equivalent of "Very Hidden" */
+					if(w[0] != "ods") assert.equal(wbs1[i].Hidden, wbs2[i].Hidden);
+					else assert.equal(!!wbs1[i].Hidden, !!wbs2[i].Hidden);
 				}
 			});
 		});
