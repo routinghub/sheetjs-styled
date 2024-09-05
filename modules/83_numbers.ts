@@ -4,7 +4,7 @@
 /* these are type imports and do not show up in the generated JS */
 import { CFB$Container, CFB$Entry } from 'cfb';
 import { WorkBook, WorkSheet, Range, CellObject, ParsingOptions, WritingOptions, DenseWorkSheet, Comments } from '../';
-import type { utils, NumberFormat } from "../";
+import type { utils, NumberFormat, DenseSheetData } from "../";
 
 declare var encode_col: typeof utils.encode_col;
 declare var encode_row: typeof utils.encode_row;
@@ -1697,7 +1697,7 @@ function write_numbers_tma(cfb: CFB$Container, deps: Dependents, ws: WorkSheet, 
 	if(trunc) console.error(`Truncating to ${encode_range(range)}`);
 
 	/* preprocess data and build up shared string table */
-	var data: CellObject[][] = [];
+	var data: DenseSheetData = [];
 	if(ws["!data"]) data = ws["!data"];
 	else {
 		var colstr: string[] = [];
@@ -1708,7 +1708,7 @@ function write_numbers_tma(cfb: CFB$Container, deps: Dependents, ws: WorkSheet, 
 			for(_C = 0; _C <= range.e.c; ++_C) {
 				var _cell = ws[colstr[_C] + _R];
 				if(!_cell) continue;
-				data[R_][_C] = _cell;
+				data[R_]![_C] = _cell;
 			}
 		}
 	}

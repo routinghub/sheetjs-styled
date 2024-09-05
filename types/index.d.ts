@@ -575,14 +575,14 @@ export interface Sheet {
      * Dense-mode  store cells in the '!data' key
      * Special keys start with '!'
      */
-    [cell: string]: CellObject | CellObject[][] | SheetKeys | any;
+    [cell: string]: CellObject | DenseSheetData | SheetKeys | any;
 
     /**
      * Dense-mode worksheets store data in an array of arrays
      *
      * Cells are accessed with sheet['!data'][R][C] (where R and C are 0-indexed)
      */
-    '!data'?: CellObject[][];
+    '!data'?: DenseSheetData;
 
     /** Sheet type */
     '!type'?: SheetType;
@@ -599,15 +599,16 @@ export interface DenseSheet extends Sheet {
      * Special keys start with '!'
      * Dense-mode worksheets store data in the '!data' key
      */
-    [cell: string]: CellObject[][] | SheetKeys | any;
+    [cell: string]: DenseSheetData | SheetKeys | any;
 
     /**
      * Dense-mode worksheets store data in an array of arrays
      *
      * Cells are accessed with sheet['!data'][R][C] (where R and C are 0-indexed)
      */
-    '!data': CellObject[][];
+    '!data': DenseSheetData;
 }
+export type DenseSheetData = ((CellObject|undefined)[]|undefined)[];
 /** General object representing a sparse Sheet (worksheet or chartsheet) */
 export interface SparseSheet extends Sheet {
     /**
@@ -650,14 +651,7 @@ export interface WorkSheet extends Sheet {
     '!autofilter'?: AutoFilterInfo;
 }
 /** Dense Worksheet Object */
-export interface DenseWorkSheet extends DenseSheet {
-    /**
-     * Dense-mode worksheets store data in an array of arrays
-     *
-     * Cells are accessed with sheet['!data'][R][C] (where R and C are 0-indexed)
-     */
-    '!data': CellObject[][];
-}
+export interface DenseWorkSheet extends DenseSheet {}
 
 /**
  * Worksheet Object with CellObject type
