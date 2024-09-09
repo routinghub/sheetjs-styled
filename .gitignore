@@ -39,3 +39,5 @@ tmp
 *.sheetjs
 *.exe
 *.img
+test_files.zip
+test_files/
