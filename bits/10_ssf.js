@@ -421,7 +421,11 @@ function hashq(str/*:string*/)/*:string*/ {
 	}
 	return o;
 }
-function rnd(val/*:number*/, d/*:number*/)/*:string*/ { var dd = Math.pow(10,d); return ""+(Math.round(val * dd)/dd); }
+function rnd(val/*:number*/, d/*:number*/)/*:string*/ {
+	var sgn = val < 0 ? -1 : 1;
+	var dd = Math.pow(10,d);
+	return ""+sgn*(Math.round(sgn * val * dd)/dd);
+}
 function dec(val/*:number*/, d/*:number*/)/*:number*/ {
 	var _frac = val - Math.floor(val), dd = Math.pow(10,d);
 	if (d < ('' + Math.round(_frac * dd)).length) return 0;
