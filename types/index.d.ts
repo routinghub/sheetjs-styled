@@ -317,6 +317,9 @@ export interface WritingOptions extends CommonOptions {
 
     /** Record Separator ("row separator") for CSV / Text output */
     RS?: string;
+
+    /** Skip certain validity checks (NOTE: generated files may not open in Excel) */
+    unsafe?: boolean;
 }
 
 /** Workbook Object */

@@ -153,7 +153,13 @@ function utf8readb(data) {
 function utf8readc(data) { return Buffer_from(data, 'binary').toString('utf8'); }
 
 var utf8corpus = "foo bar baz\u00e2\u0098\u0083\u00f0\u009f\u008d\u00a3";
-var utf8read = has_buf && (/*#__PURE__*/utf8readc(utf8corpus) == /*#__PURE__*/utf8reada(utf8corpus) && utf8readc || /*#__PURE__*/utf8readb(utf8corpus) == /*#__PURE__*/utf8reada(utf8corpus) && utf8readb) || utf8reada;
+var utf8read = /*#__PURE__*/(function() {
+  if(has_buf) {
+    if(utf8readc(utf8corpus) == utf8reada(utf8corpus)) return utf8readc;
+    if(utf8readb(utf8corpus) == utf8reada(utf8corpus)) return utf8readb;
+  }
+  return utf8reada;
+})();
 
 var utf8write/*:StringConv*/ = has_buf ? function(data) { return Buffer_from(data, 'utf8').toString("binary"); } : function(orig/*:string*/)/*:string*/ {
 	var out/*:Array<string>*/ = [], i = 0, c = 0, d = 0;

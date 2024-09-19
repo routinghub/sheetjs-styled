@@ -111,7 +111,7 @@ function write_binary_type(out, opts/*:WriteOpts*/)/*:any*/ {
 
 function writeSyncXLSX(wb/*:Workbook*/, opts/*:?WriteOpts*/) {
 	reset_cp();
-	check_wb(wb);
+	if(!opts || !opts.unsafe) check_wb(wb);
 	var o = dup(opts||{});
 	if(o.cellStyles) { o.cellNF = true; o.sheetStubs = true; }
 	if(o.type == "array") { o.type = "binary"; var out/*:string*/ = (writeSyncXLSX(wb, o)/*:any*/); o.type = "array"; return s2ab(out); }
@@ -120,7 +120,7 @@ function writeSyncXLSX(wb/*:Workbook*/, opts/*:?WriteOpts*/) {
 
 function writeSync(wb/*:Workbook*/, opts/*:?WriteOpts*/) {
 	reset_cp();
-	check_wb(wb);
+	if(!opts || !opts.unsafe) check_wb(wb);
 	var o = dup(opts||{});
 	if(o.cellStyles) { o.cellNF = true; o.sheetStubs = true; }
 	if(o.type == "array") { o.type = "binary"; var out/*:string*/ = (writeSync(wb, o)/*:any*/); o.type = "array"; return s2ab(out); }
