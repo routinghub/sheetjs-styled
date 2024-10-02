@@ -1138,3 +1138,17 @@ function read_wb_ID(d, opts) {
 	}
 }
 
+function read_wb_TABL(d, opts) {
+	var o = opts || {}, OLD_WTF = !!o.WTF; o.WTF = true;
+	try {
+		var out = DIF.to_workbook(d, o);
+		if(!out || !out.Sheets) throw "DIF bad workbook";
+		var ws = out.Sheets[out.SheetNames[0]];
+		if(!ws || !ws["!ref"]) throw "DIF empty worksheet";
+		o.WTF = OLD_WTF;
+		return out;
+	} catch(e) {
+		o.WTF = OLD_WTF;
+		return PRN.to_workbook(d, opts);
+	}
+}

@@ -7,6 +7,7 @@ changes may not be included if they are not expected to break existing code.
 * Sheet Visibility for ODS / FODS (h/t @edemaine)
 * HTML DOM ingress support formulae (`data-f`)
 * Proper handling of XLSX encoded entities (h/t @inreoh)
+* Proper handling of invalid DIF sheets that match heuristics (h/t @lowkeyfish)
 
 ## v0.20.3
 
