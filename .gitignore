@@ -41,3 +41,12 @@ tmp
 *.img
 test_files.zip
 test_files/
+
+# generated (excluded in r24 build)
+dist/
+xlsx.flow.js
+xlsx.js
+xlsx.mini.flow.js
+xlsx.mini.js
+xlsx.mjs
+xlsxworker.js
