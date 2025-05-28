@@ -369,7 +369,14 @@ function write_cellXfs(cellXfs)/*:string*/ {
 	var o/*:Array<string>*/ = [];
 	o[o.length] = (writextag('cellXfs',null));
 	cellXfs.forEach(function(c) {
-		o[o.length] = (writextag('xf', null, c));
+		if (c.alignment) {
+			var alignment = c.alignment;
+			delete c.alignment;
+			o[o.length] = (writextag('xf', writextag('alignment', null, alignment), c));
+		}
+		else {
+			o[o.length] = (writextag('xf', null, c));
+		}
 	});
 	o[o.length] = ("</cellXfs>");
 	if(o.length === 2) return "";
@@ -414,16 +421,22 @@ return function parse_sty_xml(data, themes, opts) {
 };
 })();
 
+function apply_ifdef(cb, defv) {
+	return cb ? cb(defv) : defv;
+}
+
 function write_sty_xml(wb/*:Workbook*/, opts)/*:string*/ {
 	var o = [XML_HEADER, writextag('styleSheet', null, {
 		'xmlns': XMLNS_main[0],
 		'xmlns:vt': XMLNS.vt
 	})], w;
 	if(wb.SSF && (w = write_numFmts(wb.SSF)) != null) o[o.length] = w;
-	o[o.length] = ('<fonts count="1"><font><sz val="12"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font></fonts>');
-	o[o.length] = ('<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>');
-	o[o.length] = ('<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>');
-	o[o.length] = ('<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>');
+	var css = opts.xlsxCss;
+	o[o.length] = apply_ifdef(css.fonts, '<fonts count="1"><font><sz val="12"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font></fonts>');
+	o[o.length] = apply_ifdef(css.fills, '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>');
+	o[o.length] = apply_ifdef(css.borders, '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>');
+	o[o.length] = apply_ifdef(css.cellStyle, '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>');
+	apply_ifdef(css.extendCellXfs, opts.cellXfs);
 	if((w = write_cellXfs(opts.cellXfs))) o[o.length] = (w);
 	o[o.length] = ('<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>');
 	o[o.length] = ('<dxfs count="0"/>');

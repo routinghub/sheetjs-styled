@@ -318,6 +318,20 @@ export interface WritingOptions extends CommonOptions {
     /** Record Separator ("row separator") for CSV / Text output */
     RS?: string;
 
+    /** r24 extension, css hooks for XLSX styles.
+     *
+     *  Styles will be written to <cellXfs> in xlsx stylesheet
+     *
+     *  See: vrp-solver/frontend/src/lib/excel/exporter.ts
+     *  See: get_cell_style, write_sty_xml
+     */
+    xlsxCss?: {
+        fonts?: (defXml: string) => string,
+        fills?: (defXml: string) => string,
+        borders?: (defXml: string) => string,
+        cellStyle?: (defXml: string) => string,
+        extendCellXfs?: (cellXfs: any)=> any,
+    }
     /** Skip certain validity checks (NOTE: generated files may not open in Excel) */
     unsafe?: boolean;
 }
