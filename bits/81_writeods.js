@@ -67,7 +67,7 @@ function write_number_format_ods(nf/*:string*/, nfidx/*:string*/)/*:string*/ {
 		if((t=nf.match(/# (\?+)\/(\d+)/))) { payload += writextag("number:fraction", null, {"number:min-integer-digits":0, "number:min-numerator-digits": t[1].length, "number:denominator-value": +t[2]}); break j; }
 
 		/* percentages */
-		if((t=nf.match(/(\d+)(|\.\d+)%/))) { type = "percentage"; payload += writextag("number:number", null, {"number:decimal-places": t[2] && t.length - 1 || 0, "number:min-decimal-places": t[2] && t.length - 1 || 0, "number:min-integer-digits": t[1].length }) + "<number:text>%</number:text>"; break j; }
+		if((t=nf.match(/\b(\d+)(|\.\d+)%/))) { type = "percentage"; payload += writextag("number:number", null, {"number:decimal-places": t[2] && t.length - 1 || 0, "number:min-decimal-places": t[2] && t.length - 1 || 0, "number:min-integer-digits": t[1].length }) + "<number:text>%</number:text>"; break j; }
 
 		/* datetime */
 		var has_time = false;
@@ -196,17 +196,17 @@ function write_names_ods(Names, SheetNames, idx) {
 		return "        " + writextag("table:named-range", null, {
 			"table:name": name.Name,
 			"table:cell-range-address": odsref,
-			"table:base-cell-address": odsref.replace(/[\.]?[^\.]*$/, ".$A$1")
+			"table:base-cell-address": odsref.replace(/[\.][^\.]*$/, ".$A$1")
 		});
 	}).join("\n") + "\n      </table:named-expressions>\n";
 }
 var write_content_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function() {
 	/* 6.1.2 White Space Characters */
-	var write_text_p = function(text/*:string*/)/*:string*/ {
+	var write_text_p = function(text/*:string*/, span)/*:string*/ {
 		return escapexml(text)
 			.replace(/  +/g, function($$){return '<text:s text:c="'+$$.length+'"/>';})
 			.replace(/\t/g, "<text:tab/>")
-			.replace(/\n/g, "</text:p><text:p>")
+			.replace(/\n/g, span ? "<text:line-break/>": "</text:p><text:p>")
 			.replace(/^ /, "<text:s/>").replace(/ $/, "<text:s/>");
 	};
 
@@ -214,7 +214,9 @@ var write_content_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function
 	var write_ws = function(ws, wb/*:Workbook*/, i/*:number*/, opts, nfs, date1904)/*:string*/ {
 		/* Section 9 Tables */
 		var o/*:Array<string>*/ = [];
-		o.push('      <table:table table:name="' + escapexml(wb.SheetNames[i]) + '" table:style-name="ta1">\n');
+		var tstyle = "ta1";
+		if(((((wb||{}).Workbook||{}).Sheets||[])[i]||{}).Hidden) tstyle = "ta2";
+		o.push('      <table:table table:name="' + escapexml(wb.SheetNames[i]) + '" table:style-name="' + tstyle + '">\n');
 		var R=0,C=0, range = decode_range(ws['!ref']||"A1");
 		var marr/*:Array<Range>*/ = ws['!merges'] || [], mi = 0;
 		var dense = ws["!data"] != null;
@@ -262,9 +264,22 @@ var write_content_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function
 						ct['office:boolean-value'] = (cell.v ? 'true' : 'false');
 						break;
 					case 'n':
-						textp = (cell.w||String(cell.v||0));
-						ct['office:value-type'] = "float";
-						ct['office:value'] = (cell.v||0);
+						if(!isFinite(cell.v)) {
+							if(isNaN(cell.v)) {
+								textp = "#NUM!";
+								ct['table:formula'] = "of:=#NUM!";
+							} else {
+								textp = "#DIV/0!";
+								ct['table:formula'] = "of:=" + (cell.v < 0 ? "-" : "") + "1/0";
+							}
+							ct['office:string-value'] = "";
+							ct['office:value-type'] = "string";
+							ct['calcext:value-type'] = "error";
+						} else {
+							textp = (cell.w||String(cell.v||0));
+							ct['office:value-type'] = "float";
+							ct['office:value'] = (cell.v||0);
+						}
 						break;
 					case 's': case 'str':
 						textp = cell.v == null ? "" : cell.v;
@@ -348,6 +363,9 @@ var write_content_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function
 		/* table */
 		o.push('  <style:style style:name="ta1" style:family="table" style:master-page-name="mp1">\n');
 		o.push('   <style:table-properties table:display="true" style:writing-mode="lr-tb"/>\n');
+		o.push('  </style:style>\n');
+		o.push('  <style:style style:name="ta2" style:family="table" style:master-page-name="mp1">\n');
+		o.push('   <style:table-properties table:display="false" style:writing-mode="lr-tb"/>\n');
 		o.push('  </style:style>\n');
 
 		o.push('  <number:date-style style:name="N37" number:automatic-order="true">\n');
@@ -436,7 +454,7 @@ var write_content_ods/*:{(wb:any, opts:any):string}*/ = /* @__PURE__ */(function
 
 		if(opts.bookType == "fods") {
 			o.push('<office:document' + attr + fods + '>\n');
-			o.push(write_meta_ods().replace(/<office:document-meta.*?>/, "").replace(/<\/office:document-meta>/, "") + "\n");
+			o.push(write_meta_ods().replace(/<office:document-meta[^<>]*?>/, "").replace(/<\/office:document-meta>/, "") + "\n");
 			// TODO: settings (equiv of settings.xml for ODS)
 		} else o.push('<office:document-content' + attr  + '>\n');
 		// o.push('  <office:scripts/>\n');

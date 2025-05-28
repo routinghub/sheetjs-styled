@@ -4,7 +4,7 @@
 /* these are type imports and do not show up in the generated JS */
 import { CFB$Container, CFB$Entry } from 'cfb';
 import { WorkBook, WorkSheet, Range, CellObject, ParsingOptions, WritingOptions, DenseWorkSheet, Comments } from '../';
-import type { utils, NumberFormat } from "../";
+import type { utils, NumberFormat, DenseSheetData } from "../";
 
 declare var encode_col: typeof utils.encode_col;
 declare var encode_row: typeof utils.encode_row;
@@ -960,6 +960,7 @@ function parse_TST_TableModelArchive(M: MessageSpace, root: IWAMessage, ws: Work
 		_R += _tile.nrows;
 	});
 
+	/* old-style merges */
 	if(store[13]?.[0]) {
 		var ref = M[parse_TSP_Reference(store[13][0].data)][0];
 		var mtype = varint_to_i32(ref.meta[1][0].data);
@@ -975,6 +976,50 @@ function parse_TST_TableModelArchive(M: MessageSpace, root: IWAMessage, ws: Work
 				}
 			};
 		});
+	}
+
+	/* new-style merges */
+	if(!ws["!merges"]?.length && pb[47]?.[0]) {
+		// .TST.MergeOwnerArchive
+		var merge_owner = parse_shallow(pb[47][0].data);
+		if(merge_owner[2]?.[0]) {
+			// .TST.FormulaStoreArchive
+			var formula_store = parse_shallow(merge_owner[2][0].data);
+			if(formula_store[3]?.[0]) {
+				ws["!merges"] = mappa<Range|undefined>(formula_store[3], (u) => {
+					var formula_pair = parse_shallow(u);
+
+					/* TODO: this should eventually use a proper formula parser */
+					// .TSCE.FormulaArchive
+					var formula = parse_shallow(formula_pair[2][0].data);
+
+					// .TSCE.ASTNodeArrayArchive
+					var AST_node_array = parse_shallow(formula[1][0].data);
+
+					// .TSCE.ASTNodeArrayArchive.ASTNodeArchive
+					if(!AST_node_array[1]?.[0]) return;
+					var AST_node0 = parse_shallow(AST_node_array[1][0].data);
+
+					// .TSCE.ASTNodeArrayArchive.ASTNodeType
+					var AST_node_type = varint_to_i32(AST_node0[1][0].data);
+					if(AST_node_type != 67) return; // COLON_TRACT_NODE
+
+					// .TSCE.ASTNodeArrayArchive.ASTColonTractArchive
+					var AST_colon_tract = parse_shallow(AST_node0[40][0].data);
+					if(!AST_colon_tract[3]?.[0] || !AST_colon_tract[4]?.[0]) return;
+
+					// ASTColonTractAbsoluteRangeArchive
+					var colrange = parse_shallow(AST_colon_tract[3][0].data);
+					var rowrange = parse_shallow(AST_colon_tract[4][0].data);
+					var c = varint_to_i32(colrange[1][0].data);
+					var C = colrange[2]?.[0] ? varint_to_i32(colrange[2][0].data) : c;
+					var r = varint_to_i32(rowrange[1][0].data);
+					var R = rowrange[2]?.[0] ? varint_to_i32(rowrange[2][0].data) : r;
+					return { s: { r, c }, e: { r: R, c: C }} as Range;
+				}).filter(x => x != null) as Range[];
+				// .TST.FormulaStoreArchive.FormulaStorePair
+			}
+		}
 	}
 }
 
@@ -1281,7 +1326,7 @@ function numbers_iwa_find(cfb: CFB$Container, deps: Dependents, id: number) {
 function numbers_add_meta(mlist: ProtoMessage, newid: number, newloc: string) {
 	mlist[3].push({type: 2, data: write_shallow([ [],
 		[{type: 0, data: write_varint49(newid)}],
-		[{type: 2, data: stru8(newloc.replace(/-.*$/, "")) }],
+		[{type: 2, data: stru8(newloc.replace(/-[\s\S]*$/, "")) }],
 		[{type: 2, data: stru8(newloc)}],
 		[{type: 2, data: new Uint8Array([2, 0, 0])}],
 		[{type: 2, data: new Uint8Array([2, 0, 0])}],
@@ -1652,7 +1697,7 @@ function write_numbers_tma(cfb: CFB$Container, deps: Dependents, ws: WorkSheet, 
 	if(trunc) console.error(`Truncating to ${encode_range(range)}`);
 
 	/* preprocess data and build up shared string table */
-	var data: CellObject[][] = [];
+	var data: DenseSheetData = [];
 	if(ws["!data"]) data = ws["!data"];
 	else {
 		var colstr: string[] = [];
@@ -1663,7 +1708,7 @@ function write_numbers_tma(cfb: CFB$Container, deps: Dependents, ws: WorkSheet, 
 			for(_C = 0; _C <= range.e.c; ++_C) {
 				var _cell = ws[colstr[_C] + _R];
 				if(!_cell) continue;
-				data[R_][_C] = _cell;
+				data[R_]![_C] = _cell;
 			}
 		}
 	}

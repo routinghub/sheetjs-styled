@@ -18,10 +18,12 @@ function parse_clrScheme(t, themes, opts) {
 			/* 20.1.2.3.32 srgbClr CT_SRgbColor */
 			case '<a:srgbClr':
 				color.rgb = y.val; break;
+			case '</a:srgbClr>': break;
 
 			/* 20.1.2.3.33 sysClr CT_SystemColor */
 			case '<a:sysClr':
 				color.rgb = y.lastClr; break;
+			case '</a:sysClr>': break;
 
 			/* 20.1.4.1.1 accent1 (Accent 1) */
 			/* 20.1.4.1.2 accent2 (Accent 2) */
@@ -35,8 +37,10 @@ function parse_clrScheme(t, themes, opts) {
 			/* 20.1.4.1.19 hlink (Hyperlink) */
 			/* 20.1.4.1.22 lt1 (Light 1) */
 			/* 20.1.4.1.23 lt2 (Light 2) */
-			case '<a:dk1>': case '</a:dk1>':
-			case '<a:lt1>': case '</a:lt1>':
+			case '</a:dk1>':
+			case '</a:lt1>':
+			case '<a:dk1>':
+			case '<a:lt1>':
 			case '<a:dk2>': case '</a:dk2>':
 			case '<a:lt2>': case '</a:lt2>':
 			case '<a:accent1>': case '</a:accent1>':
@@ -66,30 +70,24 @@ function parse_fontScheme(/*::t, themes, opts*/) { }
 /* 20.1.4.1.15 fmtScheme CT_StyleMatrix */
 function parse_fmtScheme(/*::t, themes, opts*/) { }
 
-var clrsregex = /<a:clrScheme([^>]*)>[\s\S]*<\/a:clrScheme>/;
-var fntsregex = /<a:fontScheme([^>]*)>[\s\S]*<\/a:fontScheme>/;
-var fmtsregex = /<a:fmtScheme([^>]*)>[\s\S]*<\/a:fmtScheme>/;
-
 /* 20.1.6.10 themeElements CT_BaseStyles */
 function parse_themeElements(data, themes, opts) {
 	themes.themeElements = {};
 
 	var t;
 
-	[
-		/* clrScheme CT_ColorScheme */
-		['clrScheme', clrsregex, parse_clrScheme],
-		/* fontScheme CT_FontScheme */
-		['fontScheme', fntsregex, parse_fontScheme],
-		/* fmtScheme CT_StyleMatrix */
-		['fmtScheme', fmtsregex, parse_fmtScheme]
-	].forEach(function(m) {
-		if(!(t=data.match(m[1]))) throw new Error(m[0] + ' not found in themeElements');
-		m[2](t, themes, opts);
-	});
-}
+	/* clrScheme CT_ColorScheme */
+	if(!(t=str_match_xml(data, "a:clrScheme"))) throw new Error('clrScheme not found in themeElements');
+	parse_clrScheme(t, themes, opts);
 
-var themeltregex = /<a:themeElements([^>]*)>[\s\S]*<\/a:themeElements>/;
+	/* fontScheme CT_FontScheme */
+	if(!(t=str_match_xml(data, "a:fontScheme"))) throw new Error('fontScheme not found in themeElements');
+	parse_fontScheme(t, themes, opts);
+
+	/* fmtScheme CT_StyleMatrix */
+	if(!(t=str_match_xml(data, "a:fmtScheme"))) throw new Error('fmtScheme not found in themeElements');
+	parse_fmtScheme(t, themes, opts);
+}
 
 /* 14.2.7 Theme Part */
 function parse_theme_xml(data/*:string*/, opts) {
@@ -100,7 +98,7 @@ function parse_theme_xml(data/*:string*/, opts) {
 	var themes = {};
 
 	/* themeElements CT_BaseStyles */
-	if(!(t=data.match(themeltregex))) throw new Error('themeElements not found in theme');
+	if(!(t=str_match_xml(data, "a:themeElements"))) throw new Error('themeElements not found in theme');
 	parse_themeElements(t[0], themes, opts);
 	themes.raw = data;
 	return themes;

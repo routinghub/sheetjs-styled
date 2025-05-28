@@ -57,7 +57,7 @@ function write_dl(fname/*:string*/, payload/*:any*/, enc/*:?string*/) {
 		var out = File(fname); out.open("w"); out.encoding = "binary";
 		if(Array.isArray(payload)) payload = a2s(payload);
 		out.write(payload); out.close(); return payload;
-	} catch(e) { if(!e.message || !e.message.match(/onstruct/)) throw e; }
+	} catch(e) { if(!e.message || e.message.indexOf("onstruct") == -1) throw e; }
 	throw new Error("cannot save file " + fname);
 }
 
@@ -71,6 +71,6 @@ function read_binary(path/*:string*/) {
 		var infile = File(path); infile.open("r"); infile.encoding = "binary";
 		var data = infile.read(); infile.close();
 		return data;
-	} catch(e) { if(!e.message || !e.message.match(/onstruct/)) throw e; }
+	} catch(e) { if(!e.message || e.message.indexOf("onstruct") == -1) throw e; }
 	throw new Error("Cannot access file " + path);
 }

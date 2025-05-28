@@ -13,13 +13,13 @@ The codec will truncate data to 1048576 observations and 16384 variables.
 Using NodeJS package manager:
 
 ```bash
-npm install --save https://cdn.sheetjs.com/dta-0.0.1/dta-0.0.1.tgz
+npm install --save https://cdn.sheetjs.com/dta-0.0.2/dta-0.0.2.tgz
 ```
 
 The standalone script is also hosted on the SheetJS CDN:
 
 ```html
-<script src="https://cdn.sheetjs.com/dta-0.0.1/package/dist/dta.min.js"></script>
+<script src="https://cdn.sheetjs.com/dta-0.0.2/package/dist/dta.min.js"></script>
 ```
 
 ## Usage
@@ -52,7 +52,7 @@ const wb = DTA.parse(fs.readFileSync("auto.dta"));
 DTA.set_utils(XLSX.utils);
 (async() => {
   /* fetch file */
-	const data = await (await fetch("test.dta")).arrayBuffer();
+  const data = await (await fetch("test.dta")).arrayBuffer();
   /* parse */
   const wb = DTA.parse(new Uint8Array(data));
   /* wb is a SheetJS workbook object */
@@ -60,4 +60,10 @@ DTA.set_utils(XLSX.utils);
   out.innerHTML = html;
 })();
 </script>
+```
+
+`dist/dta.mjs` is a ECMAScript Module build designed to be used with bundlers:
+
+```js
+import * as DTA from 'dta';
 ```

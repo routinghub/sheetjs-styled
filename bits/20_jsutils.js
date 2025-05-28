@@ -87,7 +87,7 @@ function parseDate(str/*:string*/, date1904/*:boolean*/)/*:Date*/ {
 	if(m) return new Date(Date.UTC(+m[1], +m[2]-1, +m[3], 0, 0, 0, 0));
 	/* TODO: 1900-02-29T00:00:00.000 should return a flag to treat as a date code (affects xlml) */
 	m = str.match(pdre3);
-	if(m) return new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], ((m[6] && parseInt(m[6].slice(1), 10))|| 0), ((m[7] && parseInt(m[7].slice(1), 10))||0)));
+	if(m) return new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], ((m[6] && parseInt(m[6].slice(1), 10))|| 0), ((m[7] && parseInt((m[7] + "0000").slice(1,4), 10))||0)));
 	var d = new Date(str);
 	return d;
 }
@@ -162,7 +162,7 @@ function fuzzynum(s/*:string*/)/*:number*/ {
 	var wt = 1;
 	var ss = s.replace(/([\d]),([\d])/g,"$1$2").replace(/[$]/g,"").replace(/[%]/g, function() { wt *= 100; return "";});
 	if(!isNaN(v = Number(ss))) return v / wt;
-	ss = ss.replace(/[(](.*)[)]/,function($$, $1) { wt = -wt; return $1;});
+	ss = ss.replace(/[(]([^()]*)[)]/,function($$, $1) { wt = -wt; return $1;});
 	if(!isNaN(v = Number(ss))) return v / wt;
 	return v;
 }
@@ -203,7 +203,7 @@ function fuzzydate(s/*:string*/)/*:Date*/ {
 	M = lnos.match(FDRE2);
 	if(M) return fuzzytime2(M);
 	M = lnos.match(pdre3);
-	if(M) return new Date(Date.UTC(+M[1], +M[2]-1, +M[3], +M[4], +M[5], ((M[6] && parseInt(M[6].slice(1), 10))|| 0), ((M[7] && parseInt(M[7].slice(1), 10))||0)));
+	if(M) return new Date(Date.UTC(+M[1], +M[2]-1, +M[3], +M[4], +M[5], ((M[6] && parseInt(M[6].slice(1), 10))|| 0), ((M[7] && parseInt((M[7] + "0000").slice(1,4), 10))||0)));
 	var o = new Date(utc_append_works && s.indexOf("UTC") == -1 ? s + " UTC": s), n = new Date(NaN);
 	var y = o.getYear(), m = o.getMonth(), d = o.getDate();
 	if(isNaN(d)) return n;
@@ -231,3 +231,158 @@ function utc_to_local(utc) {
 function local_to_utc(local) {
 	return new Date(Date.UTC(local.getFullYear(), local.getMonth(), local.getDate(), local.getHours(), local.getMinutes(), local.getSeconds(), local.getMilliseconds()));
 }
+
+function remove_doctype(str) {
+	var preamble = str.slice(0, 1024);
+	var si = preamble.indexOf("<!DOCTYPE");
+	if(si == -1) return str;
+	var m = str.match(/<[\w]/);
+	if(!m) return str;
+	return str.slice(0, si) + str.slice(m.index);
+}
+
+/* str.match(/<!--[\s\S]*?-->/g) --> str_match_ng(str, "<!--", "-->") */
+function str_match_ng(str, s, e) {
+  var out = [];
+
+  var si = str.indexOf(s);
+  while(si > -1) {
+    var ei = str.indexOf(e, si + s.length);
+		if(ei == -1) break;
+
+		out.push(str.slice(si, ei + e.length));
+		si = str.indexOf(s, ei + e.length);
+	}
+
+  return out.length > 0 ? out : null;
+}
+
+/* str.replace(/<!--[\s\S]*?-->/g, "") --> str_remove_ng(str, "<!--", "-->") */
+function str_remove_ng(str, s, e) {
+  var out = [], last = 0;
+
+  var si = str.indexOf(s);
+	if(si == -1) return str;
+  while(si > -1) {
+		out.push(str.slice(last, si));
+    var ei = str.indexOf(e, si + s.length);
+		if(ei == -1) break;
+
+		if((si = str.indexOf(s, (last = ei + e.length))) == -1) out.push(str.slice(last));
+	}
+
+  return out.join("");
+}
+
+/* str.match(/<tag\b[^>]*?>([\s\S]*?)</tag>/) --> str_match_xml(str, "tag") */
+var xml_boundary = { " ": 1, "\t": 1, "\r": 1, "\n": 1, ">": 1 };
+function str_match_xml(str, tag) {
+	var si = str.indexOf('<' + tag), w = tag.length + 1, L = str.length;
+	while(si >= 0 && si <= L - w && !xml_boundary[str.charAt(si + w)]) si = str.indexOf('<' + tag, si+1);
+	if(si === -1) return null;
+	var sf = str.indexOf(">", si + tag.length);
+	if(sf === -1) return null;
+	var et = "</" + tag + ">";
+	var ei = str.indexOf(et, sf);
+	if(ei == -1) return null;
+	return [str.slice(si, ei + et.length), str.slice(sf + 1, ei)];
+}
+
+/* str.match(/<(?:\w+:)?tag\b[^<>]*?>([\s\S]*?)<\/(?:\w+:)?tag>/) --> str_match_xml(str, "tag") */
+var str_match_xml_ns = /*#__PURE__*/(function() {
+	var str_match_xml_ns_cache = {};
+	return function str_match_xml_ns(str, tag) {
+		var res = str_match_xml_ns_cache[tag];
+		if(!res) str_match_xml_ns_cache[tag] = res = [
+			new RegExp('<(?:\\w+:)?'+tag+'\\b[^<>]*>', "g"),
+			new RegExp('</(?:\\w+:)?'+tag+'>', "g")
+		];
+		res[0].lastIndex = res[1].lastIndex = 0;
+		var m = res[0].exec(str);
+		if(!m) return null;
+		var si = m.index;
+		var sf = res[0].lastIndex;
+		res[1].lastIndex = res[0].lastIndex;
+		m = res[1].exec(str);
+		if(!m) return null;
+		var ei = m.index;
+		var ef = res[1].lastIndex;
+		return [str.slice(si, ef), str.slice(sf, ei)];
+	};
+})();
+
+/* str.match(/<(?:\w+:)?tag\b[^<>]*?>([\s\S]*?)<\/(?:\w+:)?tag>/g) --> str_match_xml_ns_g(str, "tag") */
+var str_match_xml_ns_g = /*#__PURE__*/(function() {
+	var str_match_xml_ns_cache = {};
+	return function str_match_xml_ns(str, tag) {
+		var out = [];
+		var res = str_match_xml_ns_cache[tag];
+		if(!res) str_match_xml_ns_cache[tag] = res = [
+			new RegExp('<(?:\\w+:)?'+tag+'\\b[^<>]*>', "g"),
+			new RegExp('</(?:\\w+:)?'+tag+'>', "g")
+		];
+		res[0].lastIndex = res[1].lastIndex = 0;
+		var m;
+		while((m = res[0].exec(str))) {
+			var si = m.index;
+			res[1].lastIndex = res[0].lastIndex;
+			m = res[1].exec(str);
+			if(!m) return null;
+			var ef = res[1].lastIndex;
+			out.push(str.slice(si, ef));
+			res[0].lastIndex = res[1].lastIndex;
+		}
+		return out.length == 0 ? null : out;
+	};
+})();
+var str_remove_xml_ns_g = /*#__PURE__*/(function() {
+	var str_remove_xml_ns_cache = {};
+	return function str_remove_xml_ns_g(str, tag) {
+		var out = [];
+		var res = str_remove_xml_ns_cache[tag];
+		if(!res) str_remove_xml_ns_cache[tag] = res = [
+			new RegExp('<(?:\\w+:)?'+tag+'\\b[^<>]*>', "g"),
+			new RegExp('</(?:\\w+:)?'+tag+'>', "g")
+		];
+		res[0].lastIndex = res[1].lastIndex = 0;
+		var m;
+		var si = 0, ef = 0;
+		while((m = res[0].exec(str))) {
+			si = m.index;
+			out.push(str.slice(ef, si));
+			ef = si;
+			res[1].lastIndex = res[0].lastIndex;
+			m = res[1].exec(str);
+			if(!m) return null;
+			ef = res[1].lastIndex;
+			res[0].lastIndex = res[1].lastIndex;
+		}
+		out.push(str.slice(ef));
+		return out.length == 0 ? "" : out.join("");
+	};
+})();
+
+/* str.match(/<(?:\w+:)?tag\b[^>]*?>([\s\S]*?)<\/(?:\w+:)?tag>/gi) --> str_match_xml_ns_ig(str, "tag") */
+var str_match_xml_ig = /*#__PURE__*/(function() {
+	var str_match_xml_ns_cache = {};
+	return function str_match_xml_ns(str, tag) {
+		var out = [];
+		var res = str_match_xml_ns_cache[tag];
+		if(!res) str_match_xml_ns_cache[tag] = res = [
+			new RegExp('<'+tag+'\\b[^<>]*>', "ig"),
+			new RegExp('</'+tag+'>', "ig")
+		];
+		res[0].lastIndex = res[1].lastIndex = 0;
+		var m;
+		while((m = res[0].exec(str))) {
+			var si = m.index;
+			res[1].lastIndex = res[0].lastIndex;
+			m = res[1].exec(str);
+			if(!m) return null;
+			var ef = res[1].lastIndex;
+			out.push(str.slice(si, ef));
+			res[0].lastIndex = res[1].lastIndex;
+		}
+		return out.length == 0 ? null : out;
+	};
+})();

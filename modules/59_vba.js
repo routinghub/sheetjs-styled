@@ -13,7 +13,7 @@ function fill_vba_xls(cfb, vba) {
   vba.FullPaths.forEach(function(p, i) {
     if (i == 0)
       return;
-    var newpath = p.replace(/[^\/]*[\/]/, "/_VBA_PROJECT_CUR/");
+    var newpath = p.replace(/^[\/]*[^\/]*[\/]/, "/_VBA_PROJECT_CUR/");
     if (newpath.slice(-1) !== "/")
       CFB.utils.cfb_add(cfb, newpath, vba.FileIndex[i].content);
   });

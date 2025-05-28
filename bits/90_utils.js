@@ -104,7 +104,7 @@ function sheet_to_json(sheet/*:Worksheet*/, opts/*:?Sheet2JSONOpts*/) {
 }
 
 var qreg = /"/g;
-function make_csv_row(sheet/*:Worksheet*/, r/*:Range*/, R/*:number*/, cols/*:Array<string>*/, fs/*:number*/, rs/*:number*/, FS/*:string*/, o/*:Sheet2CSVOpts*/)/*:?string*/ {
+function make_csv_row(sheet/*:Worksheet*/, r/*:Range*/, R/*:number*/, cols/*:Array<string>*/, fs/*:number*/, rs/*:number*/, FS/*:string*/, w/*:number*/, o/*:Sheet2CSVOpts*/)/*:?string*/ {
 	var isempty = true;
 	var row/*:Array<string>*/ = [], txt = "", rr = encode_row(R);
 	var dense = sheet["!data"] != null;
@@ -117,7 +117,7 @@ function make_csv_row(sheet/*:Worksheet*/, r/*:Range*/, R/*:number*/, cols/*:Arr
 			isempty = false;
 			txt = ''+(o.rawNumbers && val.t == "n" ? val.v : format_cell(val, null, o));
 			for(var i = 0, cc = 0; i !== txt.length; ++i) if((cc = txt.charCodeAt(i)) === fs || cc === rs || cc === 34 || o.forceQuotes) {txt = "\"" + txt.replace(qreg, '""') + "\""; break; }
-			if(txt == "ID") txt = '"ID"';
+			if(txt == "ID" && w == 0 && row.length == 0) txt = '"ID"';
 		} else if(val.f != null && !val.F) {
 			isempty = false;
 			txt = '=' + val.f; if(txt.indexOf(",") >= 0) txt = '"' + txt.replace(qreg, '""') + '"';
@@ -125,6 +125,7 @@ function make_csv_row(sheet/*:Worksheet*/, r/*:Range*/, R/*:number*/, cols/*:Arr
 		/* NOTE: Excel CSV does not support array formulae */
 		row.push(txt);
 	}
+	if(o.strip) while(row[row.length - 1] === "") --row.length;
 	if(o.blankrows === false && isempty) return null;
 	return row.join(FS);
 }
@@ -136,7 +137,6 @@ function sheet_to_csv(sheet/*:Worksheet*/, opts/*:?Sheet2CSVOpts*/)/*:string*/ {
 	var r = safe_decode_range(sheet["!ref"]);
 	var FS = o.FS !== undefined ? o.FS : ",", fs = FS.charCodeAt(0);
 	var RS = o.RS !== undefined ? o.RS : "\n", rs = RS.charCodeAt(0);
-	var endregex = new RegExp((FS=="|" ? "\\|" : FS)+"+$");
 	var row = "", cols/*:Array<string>*/ = [];
 	var colinfo/*:Array<ColInfo>*/ = o.skipHidden && sheet["!cols"] || [];
 	var rowinfo/*:Array<ColInfo>*/ = o.skipHidden && sheet["!rows"] || [];
@@ -144,9 +144,8 @@ function sheet_to_csv(sheet/*:Worksheet*/, opts/*:?Sheet2CSVOpts*/)/*:string*/ {
 	var w = 0;
 	for(var R = r.s.r; R <= r.e.r; ++R) {
 		if ((rowinfo[R]||{}).hidden) continue;
-		row = make_csv_row(sheet, r, R, cols, fs, rs, FS, o);
+		row = make_csv_row(sheet, r, R, cols, fs, rs, FS, w, o);
 		if(row == null) { continue; }
-		if(o.strip) row = row.replace(endregex,"");
 		if(row || (o.blankrows !== false)) out.push((w++ ? RS : "") + row);
 	}
 	return out.join("");
@@ -160,7 +159,7 @@ function sheet_to_txt(sheet/*:Worksheet*/, opts/*:?Sheet2CSVOpts*/) {
 	return String.fromCharCode(255) + String.fromCharCode(254) + o;
 }
 
-function sheet_to_formulae(sheet/*:Worksheet*/)/*:Array<string>*/ {
+function sheet_to_formulae(sheet/*:Worksheet*/, opts/*:?Sheet2FormulaOpts*/)/*:Array<string>*/ {
 	var y = "", x, val="";
 	if(sheet == null || sheet["!ref"] == null) return [];
 	var r = safe_decode_range(sheet['!ref']), rr = "", cols/*:Array<string>*/ = [], C;
@@ -181,6 +180,7 @@ function sheet_to_formulae(sheet/*:Worksheet*/)/*:Array<string>*/ {
 				if(y.indexOf(":") == -1) y = y + ":" + y;
 			}
 			if(x.f != null) val = x.f;
+			else if(opts && opts.values === false) continue;
 			else if(x.t == 'z') continue;
 			else if(x.t == 'n' && x.v != null) val = "" + x.v;
 			else if(x.t == 'b') val = x.v ? "TRUE" : "FALSE";
@@ -309,10 +309,10 @@ function book_append_sheet(wb/*:Workbook*/, ws/*:Worksheet*/, name/*:?string*/, 
 	var i = 1;
 	if(!name) for(; i <= 0xFFFF; ++i, name = undefined) if(wb.SheetNames.indexOf(name = "Sheet" + i) == -1) break;
 	if(!name || wb.SheetNames.length >= 0xFFFF) throw new Error("Too many worksheets");
-	if(roll && wb.SheetNames.indexOf(name) >= 0) {
-		var m = name.match(/(^.*?)(\d+)$/);
-		i = m && +m[2] || 0;
-		var root = m && m[1] || name;
+	if(roll && wb.SheetNames.indexOf(name) >= 0 && name.length < 32) {
+		var m = name.match(/\d+$/); // at this point, name length is capped at 32
+		i = m && +m[0] || 0;
+		var root = m && name.slice(0, m.index) || name;
 		for(++i; i <= 0xFFFF; ++i) if(wb.SheetNames.indexOf(name = root + i) == -1) break;
 	}
 	check_ws_name(name);

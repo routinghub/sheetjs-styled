@@ -122,25 +122,25 @@ function parse_FtCf(blob) {
 /* [MS-XLS] 2.5.140 - 2.5.154 and friends */
 function parse_FtSkip(blob) { blob.l += 2; blob.l += blob.read_shift(2); }
 var FtTab = {
-	/*::[*/0x00/*::]*/: parse_FtSkip,      /* FtEnd */
-	/*::[*/0x04/*::]*/: parse_FtSkip,      /* FtMacro */
-	/*::[*/0x05/*::]*/: parse_FtSkip,      /* FtButton */
-	/*::[*/0x06/*::]*/: parse_FtSkip,      /* FtGmo */
-	/*::[*/0x07/*::]*/: parse_FtCf,        /* FtCf */
-	/*::[*/0x08/*::]*/: parse_FtSkip,      /* FtPioGrbit */
-	/*::[*/0x09/*::]*/: parse_FtSkip,      /* FtPictFmla */
-	/*::[*/0x0A/*::]*/: parse_FtSkip,      /* FtCbls */
-	/*::[*/0x0B/*::]*/: parse_FtSkip,      /* FtRbo */
-	/*::[*/0x0C/*::]*/: parse_FtSkip,      /* FtSbs */
-	/*::[*/0x0D/*::]*/: parse_FtNts,       /* FtNts */
-	/*::[*/0x0E/*::]*/: parse_FtSkip,      /* FtSbsFmla */
-	/*::[*/0x0F/*::]*/: parse_FtSkip,      /* FtGboData */
-	/*::[*/0x10/*::]*/: parse_FtSkip,      /* FtEdoData */
-	/*::[*/0x11/*::]*/: parse_FtSkip,      /* FtRboData */
-	/*::[*/0x12/*::]*/: parse_FtSkip,      /* FtCblsData */
-	/*::[*/0x13/*::]*/: parse_FtSkip,      /* FtLbsData */
-	/*::[*/0x14/*::]*/: parse_FtSkip,      /* FtCblsFmla */
-	/*::[*/0x15/*::]*/: parse_FtCmo
+	0x00: parse_FtSkip,      /* FtEnd */
+	0x04: parse_FtSkip,      /* FtMacro */
+	0x05: parse_FtSkip,      /* FtButton */
+	0x06: parse_FtSkip,      /* FtGmo */
+	0x07: parse_FtCf,        /* FtCf */
+	0x08: parse_FtSkip,      /* FtPioGrbit */
+	0x09: parse_FtSkip,      /* FtPictFmla */
+	0x0A: parse_FtSkip,      /* FtCbls */
+	0x0B: parse_FtSkip,      /* FtRbo */
+	0x0C: parse_FtSkip,      /* FtSbs */
+	0x0D: parse_FtNts,       /* FtNts */
+	0x0E: parse_FtSkip,      /* FtSbsFmla */
+	0x0F: parse_FtSkip,      /* FtGboData */
+	0x10: parse_FtSkip,      /* FtEdoData */
+	0x11: parse_FtSkip,      /* FtRboData */
+	0x12: parse_FtSkip,      /* FtCblsData */
+	0x13: parse_FtSkip,      /* FtLbsData */
+	0x14: parse_FtSkip,      /* FtCblsFmla */
+	0x15: parse_FtCmo
 };
 function parse_FtArray(blob, length/*::, ot*/) {
 	var tgt = blob.l + length;

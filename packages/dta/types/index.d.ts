@@ -1,6 +1,6 @@
 import { WorkBook } from 'xlsx';
 export { parse, set_utils, version };
-declare const version = "0.0.1";
+declare const version = "0.0.2";
 /** Set internal instance of `utils`
  *
  * Usage:

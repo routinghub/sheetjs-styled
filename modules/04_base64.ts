@@ -59,8 +59,11 @@ function Base64_encode_arr(input: Uint8Array|number[]): string {
 function Base64_decode(input: string): string {
 	var o = "";
 	var c1=0, c2=0, c3=0, e1=0, e2=0, e3=0, e4=0;
-	input = input.replace(/^data:([^\/]+\/[^\/]+)?;base64\,/,'')
-	             .replace(/[^\w\+\/\=]/g, "")
+	if(input.slice(0,5) == "data:") {
+		var i = input.slice(0, 1024).indexOf(";base64,");
+		if(i > -1) input = input.slice(i+8);
+	}
+	input = input.replace(/[^\w\+\/\=]/g, "");
 	for(var i = 0; i < input.length;) {
 		e1 = Base64_map.indexOf(input.charAt(i++));
 		e2 = Base64_map.indexOf(input.charAt(i++));

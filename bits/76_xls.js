@@ -125,7 +125,7 @@ function parse_workbook(blob, options/*:ParseOpts*/)/*:Workbook*/ {
 		if(icv < 64) return palette[icv-8] || XLSIcv[icv];
 		return XLSIcv[icv];
 	};
-	var process_cell_style = function pcs(cell, line/*:any*/, options) {
+	var process_cell_style = function pcs(line/*:any*/, options) {
 		var xfd = line.XF.data;
 		if(!xfd || !xfd.patternType || !options || !options.cellStyles) return;
 		line.s = ({}/*:any*/);
@@ -137,7 +137,7 @@ function parse_workbook(blob, options/*:ParseOpts*/)/*:Workbook*/ {
 	var addcell = function addcell(cell/*:any*/, line/*:any*/, options/*:any*/) {
 		if(!biff4w && file_depth > 1) return;
 		if(options.sheetRows && cell.r >= options.sheetRows) return;
-		if(options.cellStyles && line.XF && line.XF.data) process_cell_style(cell, line, options);
+		if(options.cellStyles && line.XF && line.XF.data) process_cell_style(line, options);
 		delete line.ixfe; delete line.XF;
 		lastcell = cell;
 		last_cell = encode_cell(cell);
@@ -330,17 +330,17 @@ function parse_workbook(blob, options/*:ParseOpts*/)/*:Workbook*/ {
 				} break;
 				case 0x0009: case 0x0209: case 0x0409: case 0x0809 /* BOF */: {
 					if(opts.biff === 8) opts.biff = {
-						/*::[*/0x0009/*::]*/:2,
-						/*::[*/0x0209/*::]*/:3,
-						/*::[*/0x0409/*::]*/:4
+						0x0009: 2,
+						0x0209: 3,
+						0x0409: 4
 					}[RecordType] || {
-						/*::[*/0x0200/*::]*/:2,
-						/*::[*/0x0300/*::]*/:3,
-						/*::[*/0x0400/*::]*/:4,
-						/*::[*/0x0500/*::]*/:5,
-						/*::[*/0x0600/*::]*/:8,
-						/*::[*/0x0002/*::]*/:2,
-						/*::[*/0x0007/*::]*/:2
+						0x0200: 2,
+						0x0300: 3,
+						0x0400: 4,
+						0x0500: 5,
+						0x0600: 8,
+						0x0002: 2,
+						0x0007: 2
 					}[val.BIFFVer] || 8;
 					opts.biffguess = val.BIFFVer == 0;
 					if(val.BIFFVer == 0 && val.dt == 0x1000) { opts.biff = 5; seen_codepage = true; set_cp(opts.codepage = 28591); }
@@ -627,14 +627,14 @@ function parse_xls_props(cfb/*:CFBContainer*/, props, o) {
 	if(DSI && DSI.size > 0) try {
 		var DocSummary = parse_PropertySetStream(DSI, DocSummaryPIDDSI, PSCLSID.DSI);
 		for(var d in DocSummary) props[d] = DocSummary[d];
-	} catch(e) {if(o.WTF) throw e;/* empty */}
+	} catch(e) {if(o.WTF) console.error(e && e.message || e);}
 
 	/* [MS-OSHARED] 2.3.3.2.1 Summary Information Property Set*/
 	var SI = CFB.find(cfb, '/!SummaryInformation');
 	if(SI && SI.size > 0) try {
 		var Summary = parse_PropertySetStream(SI, SummaryPIDSI, PSCLSID.SI);
 		for(var s in Summary) if(props[s] == null) props[s] = Summary[s];
-	} catch(e) {if(o.WTF) throw e;/* empty */}
+	} catch(e) {if(o.WTF) console.error(e && e.message || e);}
 
 	if(props.HeadingPairs && props.TitlesOfParts) {
 		load_props_pairs(props.HeadingPairs, props.TitlesOfParts, props, o);

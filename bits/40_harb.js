@@ -2,60 +2,60 @@ var DBF_SUPPORTED_VERSIONS = [0x02, 0x03, 0x30, 0x31, 0x83, 0x8B, 0x8C, 0xF5];
 var DBF = /*#__PURE__*/(function() {
 var dbf_codepage_map = {
 	/* Code Pages Supported by Visual FoxPro */
-	/*::[*/0x01/*::]*/:   437,           /*::[*/0x02/*::]*/:   850,
-	/*::[*/0x03/*::]*/:  1252,           /*::[*/0x04/*::]*/: 10000,
-	/*::[*/0x64/*::]*/:   852,           /*::[*/0x65/*::]*/:   866,
-	/*::[*/0x66/*::]*/:   865,           /*::[*/0x67/*::]*/:   861,
-	/*::[*/0x68/*::]*/:   895,           /*::[*/0x69/*::]*/:   620,
-	/*::[*/0x6A/*::]*/:   737,           /*::[*/0x6B/*::]*/:   857,
-	/*::[*/0x78/*::]*/:   950,           /*::[*/0x79/*::]*/:   949,
-	/*::[*/0x7A/*::]*/:   936,           /*::[*/0x7B/*::]*/:   932,
-	/*::[*/0x7C/*::]*/:   874,           /*::[*/0x7D/*::]*/:  1255,
-	/*::[*/0x7E/*::]*/:  1256,           /*::[*/0x96/*::]*/: 10007,
-	/*::[*/0x97/*::]*/: 10029,           /*::[*/0x98/*::]*/: 10006,
-	/*::[*/0xC8/*::]*/:  1250,           /*::[*/0xC9/*::]*/:  1251,
-	/*::[*/0xCA/*::]*/:  1254,           /*::[*/0xCB/*::]*/:  1253,
+	0x01:   437,           0x02:   850,
+	0x03:  1252,           0x04: 10000,
+	0x64:   852,           0x65:   866,
+	0x66:   865,           0x67:   861,
+	0x68:   895,           0x69:   620,
+	0x6A:   737,           0x6B:   857,
+	0x78:   950,           0x79:   949,
+	0x7A:   936,           0x7B:   932,
+	0x7C:   874,           0x7D:  1255,
+	0x7E:  1256,           0x96: 10007,
+	0x97: 10029,           0x98: 10006,
+	0xC8:  1250,           0xC9:  1251,
+	0xCA:  1254,           0xCB:  1253,
 
 	/* shapefile DBF extension */
-	/*::[*/0x00/*::]*/: 20127,           /*::[*/0x08/*::]*/:   865,
-	/*::[*/0x09/*::]*/:   437,           /*::[*/0x0A/*::]*/:   850,
-	/*::[*/0x0B/*::]*/:   437,           /*::[*/0x0D/*::]*/:   437,
-	/*::[*/0x0E/*::]*/:   850,           /*::[*/0x0F/*::]*/:   437,
-	/*::[*/0x10/*::]*/:   850,           /*::[*/0x11/*::]*/:   437,
-	/*::[*/0x12/*::]*/:   850,           /*::[*/0x13/*::]*/:   932,
-	/*::[*/0x14/*::]*/:   850,           /*::[*/0x15/*::]*/:   437,
-	/*::[*/0x16/*::]*/:   850,           /*::[*/0x17/*::]*/:   865,
-	/*::[*/0x18/*::]*/:   437,           /*::[*/0x19/*::]*/:   437,
-	/*::[*/0x1A/*::]*/:   850,           /*::[*/0x1B/*::]*/:   437,
-	/*::[*/0x1C/*::]*/:   863,           /*::[*/0x1D/*::]*/:   850,
-	/*::[*/0x1F/*::]*/:   852,           /*::[*/0x22/*::]*/:   852,
-	/*::[*/0x23/*::]*/:   852,           /*::[*/0x24/*::]*/:   860,
-	/*::[*/0x25/*::]*/:   850,           /*::[*/0x26/*::]*/:   866,
-	/*::[*/0x37/*::]*/:   850,           /*::[*/0x40/*::]*/:   852,
-	/*::[*/0x4D/*::]*/:   936,           /*::[*/0x4E/*::]*/:   949,
-	/*::[*/0x4F/*::]*/:   950,           /*::[*/0x50/*::]*/:   874,
-	/*::[*/0x57/*::]*/:  1252,           /*::[*/0x58/*::]*/:  1252,
-	/*::[*/0x59/*::]*/:  1252,           /*::[*/0x6C/*::]*/:   863,
-	/*::[*/0x86/*::]*/:   737,           /*::[*/0x87/*::]*/:   852,
-	/*::[*/0x88/*::]*/:   857,           /*::[*/0xCC/*::]*/:  1257,
+	0x00: 20127,           0x08:   865,
+	0x09:   437,           0x0A:   850,
+	0x0B:   437,           0x0D:   437,
+	0x0E:   850,           0x0F:   437,
+	0x10:   850,           0x11:   437,
+	0x12:   850,           0x13:   932,
+	0x14:   850,           0x15:   437,
+	0x16:   850,           0x17:   865,
+	0x18:   437,           0x19:   437,
+	0x1A:   850,           0x1B:   437,
+	0x1C:   863,           0x1D:   850,
+	0x1F:   852,           0x22:   852,
+	0x23:   852,           0x24:   860,
+	0x25:   850,           0x26:   866,
+	0x37:   850,           0x40:   852,
+	0x4D:   936,           0x4E:   949,
+	0x4F:   950,           0x50:   874,
+	0x57:  1252,           0x58:  1252,
+	0x59:  1252,           0x6C:   863,
+	0x86:   737,           0x87:   852,
+	0x88:   857,           0xCC:  1257,
 
-	/*::[*/0xFF/*::]*/: 16969
+	0xFF: 16969
 };
 var dbf_reverse_map = evert({
-	/*::[*/0x01/*::]*/:   437,           /*::[*/0x02/*::]*/:   850,
-	/*::[*/0x03/*::]*/:  1252,           /*::[*/0x04/*::]*/: 10000,
-	/*::[*/0x64/*::]*/:   852,           /*::[*/0x65/*::]*/:   866,
-	/*::[*/0x66/*::]*/:   865,           /*::[*/0x67/*::]*/:   861,
-	/*::[*/0x68/*::]*/:   895,           /*::[*/0x69/*::]*/:   620,
-	/*::[*/0x6A/*::]*/:   737,           /*::[*/0x6B/*::]*/:   857,
-	/*::[*/0x78/*::]*/:   950,           /*::[*/0x79/*::]*/:   949,
-	/*::[*/0x7A/*::]*/:   936,           /*::[*/0x7B/*::]*/:   932,
-	/*::[*/0x7C/*::]*/:   874,           /*::[*/0x7D/*::]*/:  1255,
-	/*::[*/0x7E/*::]*/:  1256,           /*::[*/0x96/*::]*/: 10007,
-	/*::[*/0x97/*::]*/: 10029,           /*::[*/0x98/*::]*/: 10006,
-	/*::[*/0xC8/*::]*/:  1250,           /*::[*/0xC9/*::]*/:  1251,
-	/*::[*/0xCA/*::]*/:  1254,           /*::[*/0xCB/*::]*/:  1253,
-	/*::[*/0x00/*::]*/: 20127
+	0x01:   437,           0x02:   850,
+	0x03:  1252,           0x04: 10000,
+	0x64:   852,           0x65:   866,
+	0x66:   865,           0x67:   861,
+	0x68:   895,           0x69:   620,
+	0x6A:   737,           0x6B:   857,
+	0x78:   950,           0x79:   949,
+	0x7A:   936,           0x7B:   932,
+	0x7C:   874,           0x7D:  1255,
+	0x7E:  1256,           0x96: 10007,
+	0x97: 10029,           0x98: 10006,
+	0xC8:  1250,           0xC9:  1251,
+	0xCA:  1254,           0xCB:  1253,
+	0x00: 20127
 });
 /* TODO: find an actual specification */
 function dbf_to_aoa(buf, opts)/*:AOA*/ {
@@ -118,7 +118,7 @@ function dbf_to_aoa(buf, opts)/*:AOA*/ {
 	var ww = l7 ? 32 : 11;
 	while(d.l < hend && d[d.l] != 0x0d) {
 		field = ({}/*:any*/);
-		field.name = (typeof $cptable !== "undefined" ? $cptable.utils.decode(current_cp, d.slice(d.l, d.l+ww)) : a2s(d.slice(d.l, d.l + ww))).replace(/[\u0000\r\n].*$/g,"");
+		field.name = (typeof $cptable !== "undefined" ? $cptable.utils.decode(current_cp, d.slice(d.l, d.l+ww)) : a2s(d.slice(d.l, d.l + ww))).replace(/[\u0000\r\n][\S\s]*$/g,"");
 		d.l += ww;
 		field.type = String.fromCharCode(d.read_shift(1));
 		if(ft != 0x02 && !l7) field.offset = d.read_shift(4);
@@ -176,7 +176,7 @@ function dbf_to_aoa(buf, opts)/*:AOA*/ {
 			switch(fields[C].type) {
 				case 'C':
 					// NOTE: it is conventional to write '  /  /  ' for empty dates
-					if(s.trim().length) out[R][C] = s.replace(/\s+$/,"");
+					if(s.trim().length) out[R][C] = s.replace(/([^\s])\s+$/,"$1");
 					break;
 				case 'D':
 					if(s.length === 8) {
@@ -404,9 +404,9 @@ var SYLK = /*#__PURE__*/(function() {
 		KC:'Ç', Kc:'ç', q:'æ',  z:'œ',  a:'Æ',  j:'Œ',
 		DN:209, Dn:241, Hy:255,
 		S:169,  c:170,  R:174,  "B ":180,
-		/*::[*/0/*::]*/:176,    /*::[*/1/*::]*/:177,  /*::[*/2/*::]*/:178,
-		/*::[*/3/*::]*/:179,    /*::[*/5/*::]*/:181,  /*::[*/6/*::]*/:182,
-		/*::[*/7/*::]*/:183,    Q:185,  k:186,  b:208,  i:216,  l:222,  s:240,  y:248,
+		0:176,  1:177,  2:178,
+		3:179,  5:181,  6:182,
+		7:183,  Q:185,  k:186,  b:208,  i:216,  l:222,  s:240,  y:248,
 		"!":161, '"':162, "#":163, "(":164, "%":165, "'":167, "H ":168,
 		"+":171, ";":187, "<":188, "=":189, ">":190, "?":191, "{":223
 	}/*:any*/);
@@ -483,6 +483,7 @@ var SYLK = /*#__PURE__*/(function() {
 					val = record[rj].slice(1);
 					if(val.charAt(0) === '"') { val = val.slice(1,val.length - 1); cell_t = "s"; }
 					else if(val === 'TRUE' || val === 'FALSE') { val = val === 'TRUE'; cell_t = "b"; }
+					else if(val.charAt(0) == "#" && RBErr[val] != null) { cell_t = "e"; val = RBErr[val]; }
 					else if(!isNaN(fuzzynum(val))) {
 						val = fuzzynum(val); cell_t = "n";
 						if(next_cell_format !== null && fmt_is_date(next_cell_format) && opts.cellDates) {
@@ -592,10 +593,10 @@ var SYLK = /*#__PURE__*/(function() {
 		var o = "C;Y" + (R+1) + ";X" + (C+1) + ";K";
 		switch(cell.t) {
 			case 'n':
-				o += (cell.v||0);
+				o += isFinite(cell.v) ? (cell.v||0) : BErr[isNaN(cell.v) ? 0x24 : 0x07];
 				if(cell.f && !cell.F) o += ";E" + a1_to_rc(cell.f, {r:R, c:C}); break;
 			case 'b': o += cell.v ? "TRUE" : "FALSE"; break;
-			case 'e': o += cell.w || cell.v; break;
+			case 'e': o += cell.w || BErr[cell.v] || cell.v; break;
 			case 'd': o += datenum(parseDate(cell.v, date1904), date1904); break;
 			case 's': o += '"' + (cell.v == null ? "" : String(cell.v)).replace(/"/g,"").replace(/;/g, ";;") + '"'; break;
 		}
@@ -821,7 +822,7 @@ var ETH = /*#__PURE__*/(function() {
 				case 'vtc':
 					switch(record[3]) {
 						case 'nl': arr[R][C] = +record[4] ? true : false; break;
-						default: arr[R][C] = +record[4]; break;
+						default: arr[R][C] = record[record.length-1].charAt(0) == "#" ? ({t: "e", v: RBErr[record[record.length-1]] }) : +record[4]; break;
 					}
 					if(record[2] == 'vtf') arr[R][C] = [arr[R][C], _f];
 			}
@@ -864,11 +865,7 @@ var ETH = /*#__PURE__*/(function() {
 				if(!cell || cell.v == null || cell.t === 'z') continue;
 				oo = ["cell", coord, 't'];
 				switch(cell.t) {
-					case 's': case 'str': oo.push(encode(cell.v)); break;
-					case 'n':
-						if(!cell.f) { oo[2]='v'; oo[3]=cell.v; }
-						else { oo[2]='vtf'; oo[3]='n'; oo[4]=cell.v; oo[5]=encode(cell.f); }
-						break;
+					case 's': oo.push(encode(cell.v)); break;
 					case 'b':
 						oo[2] = 'vt'+(cell.f?'f':'c'); oo[3]='nl'; oo[4]=cell.v?"1":"0";
 						oo[5] = encode(cell.f||(cell.v?'TRUE':'FALSE'));
@@ -877,6 +874,19 @@ var ETH = /*#__PURE__*/(function() {
 						var t = datenum(parseDate(cell.v));
 						oo[2] = 'vtc'; oo[3] = 'nd'; oo[4] = ""+t;
 						oo[5] = cell.w || SSF_format(cell.z || table_fmt[14], t);
+						break;
+					case 'n':
+						if(isFinite(cell.v)) {
+							if(!cell.f) { oo[2]='v'; oo[3]=cell.v; }
+							else { oo[2]='vtf'; oo[3]='n'; oo[4]=cell.v; oo[5]=encode(cell.f); }
+						} else {
+							oo[2] = 'vt' + (cell.f ? 'f' : 'c');
+							oo[3] = "e" + BErr[isNaN(cell.v) ? 0x24 : 0x07];
+							oo[4] = "0";
+							oo[5] = cell.f || oo[3].slice(1);
+							oo[6] = "e";
+							oo[7] = oo[3].slice(1);
+						}
 						break;
 					case 'e': continue;
 				}
@@ -909,6 +919,7 @@ var PRN = /*#__PURE__*/(function() {
 		else if(data === 'FALSE') arr[R][C] = false;
 		else if(!isNaN(fuzzynum(data))) arr[R][C] = fuzzynum(data);
 		else if(!isNaN(fuzzydate(data).getDate())) arr[R][C] = parseDate(data);
+		else if(data.charCodeAt(0) == 35 /* # */ && RBErr[data] != null) arr[R][C] = ({ t: 'e', v: RBErr[data], w: data });
 		else arr[R][C] = data;
 	}
 
@@ -940,18 +951,18 @@ var PRN = /*#__PURE__*/(function() {
 
 	// List of accepted CSV separators
 	var guess_seps = {
-		/*::[*/0x2C/*::]*/: ',',
-		/*::[*/0x09/*::]*/: "\t",
-		/*::[*/0x3B/*::]*/: ';',
-		/*::[*/0x7C/*::]*/: '|'
+		0x2C: ',',
+		0x09: "\t",
+		0x3B: ';',
+		0x7C: '|'
 	};
 
 	// CSV separator weights to be used in case of equal numbers
 	var guess_sep_weights = {
-		/*::[*/0x2C/*::]*/: 3,
-		/*::[*/0x09/*::]*/: 2,
-		/*::[*/0x3B/*::]*/: 1,
-		/*::[*/0x7C/*::]*/: 0
+		0x2C: 3,
+		0x09: 2,
+		0x3B: 1,
+		0x7C: 0
 	};
 
 	function guess_sep(str) {
@@ -1026,6 +1037,8 @@ var PRN = /*#__PURE__*/(function() {
 				if(o.cellDates) { cell.t = 'd'; cell.v = v; }
 				else { cell.t = 'n'; cell.v = datenum(v); }
 				if(!o.cellNF) delete cell.z;
+			} else if(s.charCodeAt(0) == 35 /* # */ && RBErr[s] != null) {
+				cell.t = 'e'; cell.w = s; cell.v = RBErr[s];
 			} else {
 				cell.t = 's';
 				cell.v = s;
@@ -1120,8 +1133,22 @@ function read_wb_ID(d, opts) {
 		return out;
 	} catch(e) {
 		o.WTF = OLD_WTF;
-		if(!e.message.match(/SYLK bad record ID/) && OLD_WTF) throw e;
+		if((e.message.indexOf("SYLK bad record ID") == -1) && OLD_WTF) throw e;
 		return PRN.to_workbook(d, opts);
 	}
 }
 
+function read_wb_TABL(d, opts) {
+	var o = opts || {}, OLD_WTF = !!o.WTF; o.WTF = true;
+	try {
+		var out = DIF.to_workbook(d, o);
+		if(!out || !out.Sheets) throw "DIF bad workbook";
+		var ws = out.Sheets[out.SheetNames[0]];
+		if(!ws || !ws["!ref"]) throw "DIF empty worksheet";
+		o.WTF = OLD_WTF;
+		return out;
+	} catch(e) {
+		o.WTF = OLD_WTF;
+		return PRN.to_workbook(d, opts);
+	}
+}

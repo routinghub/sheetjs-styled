@@ -4,7 +4,7 @@ function parse_rpr(rpr) {
 	var pass = false;
 	if(m) for(;i!=m.length; ++i) {
 		var y = parsexmltag(m[i]);
-		switch(y[0].replace(/\w*:/g,"")) {
+		switch(y[0].replace(/<\w*:/g,"<")) {
 			/* 18.8.12 condense CT_BooleanProperty */
 			/* ** not required . */
 			case '<condense': break;
@@ -107,15 +107,14 @@ function parse_rpr(rpr) {
 }
 
 var parse_rs = /*#__PURE__*/(function() {
-	var tregex = matchtag("t"), rpregex = matchtag("rPr");
 	/* 18.4.4 r CT_RElt */
 	function parse_r(r) {
 		/* 18.4.12 t ST_Xstring */
-		var t = r.match(tregex)/*, cp = 65001*/;
+		var t = str_match_xml_ns(r, "t")/*, cp = 65001*/;
 		if(!t) return {t:"s", v:""};
 
 		var o/*:Cell*/ = ({t:'s', v:unescapexml(t[1])}/*:any*/);
-		var rpr = r.match(rpregex);
+		var rpr = str_match_xml_ns(r, "rPr");
 		if(rpr) o.s = parse_rpr(rpr[1]);
 		return o;
 	}
@@ -168,8 +167,7 @@ var rs_to_html = /*#__PURE__*/(function parse_rs_factory() {
 })();
 
 /* 18.4.8 si CT_Rst */
-var sitregex = /<(?:\w+:)?t[^>]*>([^<]*)<\/(?:\w+:)?t>/g, sirregex = /<(?:\w+:)?r\b[^>]*>/;
-var sirphregex = /<(?:\w+:)?rPh.*?>([\s\S]*?)<\/(?:\w+:)?rPh>/g;
+var sitregex = /<(?:\w+:)?t\b[^<>]*>([^<]*)<\/(?:\w+:)?t>/g, sirregex = /<(?:\w+:)?r\b[^<>]*>/;
 function parse_si(x, opts) {
 	var html = opts ? opts.cellHTML : true;
 	var z = {};
@@ -185,7 +183,7 @@ function parse_si(x, opts) {
 	/* 18.4.4 r CT_RElt (Rich Text Run) */
 	else if((/*y = */x.match(sirregex))) {
 		z.r = utf8read(x);
-		z.t = unescapexml(utf8read((x.replace(sirphregex, '').match(sitregex)||[]).join("").replace(tagregex,"")), true);
+		z.t = unescapexml(utf8read((str_remove_xml_ns_g(x, "rPh").match(sitregex)||[]).join("").replace(tagregex,"")), true);
 		if(html) z.h = rs_to_html(parse_rs(z.r));
 	}
 	/* 18.4.3 phoneticPr CT_PhoneticPr (TODO: needed for Asian support) */
@@ -194,21 +192,20 @@ function parse_si(x, opts) {
 }
 
 /* 18.4 Shared String Table */
-var sstr0 = /<(?:\w+:)?sst([^>]*)>([\s\S]*)<\/(?:\w+:)?sst>/;
 var sstr1 = /<(?:\w+:)?(?:si|sstItem)>/g;
 var sstr2 = /<\/(?:\w+:)?(?:si|sstItem)>/;
 function parse_sst_xml(data/*:string*/, opts)/*:SST*/ {
 	var s/*:SST*/ = ([]/*:any*/), ss = "";
 	if(!data) return s;
 	/* 18.4.9 sst CT_Sst */
-	var sst = data.match(sstr0);
+	var sst = str_match_xml_ns(data, "sst");
 	if(sst) {
-		ss = sst[2].replace(sstr1,"").split(sstr2);
+		ss = sst[1].replace(sstr1,"").split(sstr2);
 		for(var i = 0; i != ss.length; ++i) {
 			var o = parse_si(ss[i].trim(), opts);
 			if(o != null) s[s.length] = o;
 		}
-		sst = parsexmltag(sst[1]); s.Count = sst.count; s.Unique = sst.uniqueCount;
+		sst = parsexmltag(sst[0].slice(0, sst[0].indexOf(">"))); s.Count = sst.count; s.Unique = sst.uniqueCount;
 	}
 	return s;
 }

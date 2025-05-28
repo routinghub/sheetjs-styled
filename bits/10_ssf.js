@@ -243,6 +243,7 @@ function SSF_large_exp(v/*:number*/)/*:string*/ {
 }
 
 function SSF_general_num(v/*:number*/)/*:string*/ {
+	if(!isFinite(v)) return isNaN(v) ? "#NUM!" : "#DIV/0!";
 	var V = Math.floor(Math.log(Math.abs(v))*Math.LOG10E), o;
 
 	if(V >= -4 && V <= -1) o = v.toPrecision(10+V);
@@ -408,7 +409,7 @@ function write_num_f2(r/*:Array<string>*/, aval/*:number*/, sign/*:string*/)/*:s
 	return sign + (aval === 0 ? "" : ""+aval) + fill(" ", r[1].length + 2 + r[4].length);
 }
 var dec1 = /^#*0*\.([0#]+)/;
-var closeparen = /\).*[0#]/;
+var closeparen = /\)[^)]*[0#]/;
 var phone = /\(###\) ###\\?-####/;
 function hashq(str/*:string*/)/*:string*/ {
 	var o = "", cc;
@@ -420,7 +421,11 @@ function hashq(str/*:string*/)/*:string*/ {
 	}
 	return o;
 }
-function rnd(val/*:number*/, d/*:number*/)/*:string*/ { var dd = Math.pow(10,d); return ""+(Math.round(val * dd)/dd); }
+function rnd(val/*:number*/, d/*:number*/)/*:string*/ {
+	var sgn = val < 0 ? -1 : 1;
+	var dd = Math.pow(10,d);
+	return ""+sgn*(Math.round(sgn * val * dd)/dd);
+}
 function dec(val/*:number*/, d/*:number*/)/*:number*/ {
 	var _frac = val - Math.floor(val), dd = Math.pow(10,d);
 	if (d < ('' + Math.round(_frac * dd)).length) return 0;
@@ -940,6 +945,8 @@ function choose_fmt(f/*:string*/, v/*:any*/) {
 	if(l<4 && lat>-1) --l;
 	if(fmt.length > 4) throw new Error("cannot find right format for |" + fmt.join("|") + "|");
 	if(typeof v !== "number") return [4, fmt.length === 4 || lat>-1?fmt[fmt.length-1]:"@"];
+	/* NOTE: most spreadsheet software do not support NaN or infinities */
+	if(typeof v === "number" && !isFinite(v)) v = 0;
 	switch(fmt.length) {
 		case 1: fmt = lat>-1 ? ["General", "General", "General", fmt[0]] : [fmt[0], fmt[0], fmt[0], "@"]; break;
 		case 2: fmt = lat>-1 ? [fmt[0], fmt[0], fmt[0], fmt[1]] : [fmt[0], fmt[1], fmt[0], "@"]; break;
@@ -976,6 +983,8 @@ function SSF_format(fmt/*:string|number*/,v/*:any*/,o/*:?any*/) {
 	if(SSF_isgeneral(f[1])) return SSF_general(v, o);
 	if(v === true) v = "TRUE"; else if(v === false) v = "FALSE";
 	else if(v === "" || v == null) return "";
+	else if(isNaN(v) && f[1].indexOf("0") > -1) return "#NUM!";
+	else if(!isFinite(v) && f[1].indexOf("0") > -1) return "#DIV/0!";
 	return eval_fmt(f[1], v, o, f[0]);
 }
 function SSF_load(fmt/*:string*/, idx/*:?number*/)/*:number*/ {

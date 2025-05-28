@@ -5,9 +5,9 @@ function parse_text_p(text/*:string*//*::, tag*/)/*:Array<any>*/ {
 		.replace(/[\t\r\n]/g, " ").trim().replace(/ +/g, " ")
 		.replace(/<text:s\/>/g," ")
 		.replace(/<text:s text:c="(\d+)"\/>/g, function($$,$1) { return Array(parseInt($1,10)+1).join(" "); })
-		.replace(/<text:tab[^>]*\/>/g,"\t")
+		.replace(/<text:tab[^<>]*\/>/g,"\t")
 		.replace(/<text:line-break\/>/g,"\n");
-	var v = unescapexml(fixed.replace(/<[^>]*>/g,""));
+	var v = unescapexml(fixed.replace(/<[^<>]*>/g,""));
 
 	return [v];
 }
@@ -17,10 +17,10 @@ function parse_ods_styles(d/*:string*/, _opts, _nfm) {
 	var number_format_map = _nfm || {};
 	var str = xlml_normalize(d);
 	xlmlregex.lastIndex = 0;
-	str = str.replace(/<!--([\s\S]*?)-->/mg,"").replace(/<!DOCTYPE[^\[]*\[[^\]]*\]>/gm,"");
+	str = remove_doctype(str_remove_ng(str, "<!--", "-->"));
 	var Rn, NFtag, NF = "", tNF = "", y, etpos = 0, tidx = -1, infmt = false, payload = "";
 	while((Rn = xlmlregex.exec(str))) {
-		switch((Rn[3]=Rn[3].replace(/_.*$/,""))) {
+		switch((Rn[3]=Rn[3].replace(/_[\s\S]*$/,""))) {
 		/* Number Format Definitions */
 		case 'number-style': // <number:number-style> 16.29.2
 		case 'currency-style': // <number:currency-style> 16.29.8
@@ -247,16 +247,16 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 		var Sheets = {}, SheetNames/*:Array<string>*/ = [];
 		var ws = ({}/*:any*/); if(opts.dense) ws["!data"] = [];
 		var Rn, q/*:: :any = ({t:"", v:null, z:null, w:"",c:[],}:any)*/;
-		var ctag = ({value:""}/*:any*/);
+		var ctag = ({value:""}/*:any*/), ctag2 = ({}/*:any*/);
 		var textp = "", textpidx = 0, textptag/*:: = {}*/, oldtextp = "", oldtextpidx = 0;
 		var textR = [], oldtextR = [];
 		var R = -1, C = -1, range = {s: {r:1000000,c:10000000}, e: {r:0, c:0}};
 		var row_ol = 0;
-		var number_format_map = _nfm || {}, styles = {};
+		var number_format_map = _nfm || {}, styles = {}, tstyles = {};
 		var merges/*:Array<Range>*/ = [], mrange = {}, mR = 0, mC = 0;
 		var rowinfo/*:Array<RowInfo>*/ = [], rowpeat = 1, colpeat = 1;
 		var arrayf/*:Array<[Range, string]>*/ = [];
-		var WB = {Names:[], WBProps:{}};
+		var WB = {Names:[], WBProps:{}, Sheets:[]};
 		var atag = ({}/*:any*/);
 		var _Ref/*:[string, string]*/ = ["", ""];
 		var comments/*:Array<Comment>*/ = [], comment/*:Comment*/ = ({}/*:any*/);
@@ -264,8 +264,8 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 		var isstub = false, intable = false;
 		var i = 0;
 		xlmlregex.lastIndex = 0;
-		str = str.replace(/<!--([\s\S]*?)-->/mg,"").replace(/<!DOCTYPE[^\[]*\[[^\]]*\]>/gm,"");
-		while((Rn = xlmlregex.exec(str))) switch((Rn[3]=Rn[3].replace(/_.*$/,""))) {
+		str = remove_doctype(str_remove_ng(str, "<!--", "-->"));
+		while((Rn = xlmlregex.exec(str))) switch((Rn[3]=Rn[3].replace(/_[\s\S]*$/,""))) {
 
 			case 'table': case '工作表': // 9.1.2 <table:table>
 				if(Rn[1]==='/') {
@@ -282,6 +282,10 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 					if(typeof JSON !== 'undefined') JSON.stringify(sheetag);
 					SheetNames.push(sheetag.name);
 					Sheets[sheetag.name] = ws;
+					WB.Sheets.push({
+						/* TODO: CodeName */
+						Hidden: (tstyles[sheetag["style-name"]] && tstyles[sheetag["style-name"]]["display"] ? (parsexmlbool(tstyles[sheetag["style-name"]]["display"]) ? 0 : 1) : 0)
+					});
 					intable = false;
 				}
 				else if(Rn[0].charAt(Rn[0].length-2) !== '/') {
@@ -306,10 +310,18 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 				if(rowpeat < 10) for(i = 0; i < rowpeat; ++i) if(row_ol > 0) rowinfo[R + i] = {level: row_ol};
 				C = -1; break;
 			case 'covered-table-cell': // 9.1.5 <table:covered-table-cell>
-				if(Rn[1] !== '/') ++C;
-				if(opts.sheetStubs) {
-					if(opts.dense) { if(!ws["!data"][R]) ws["!data"][R] = []; ws["!data"][R][C] = {t:'z'}; }
-					else ws[encode_cell({r:R,c:C})] = {t:'z'};
+				if(Rn[1] !== '/') {
+					++C;
+					ctag = parsexmltag(Rn[0], false);
+					colpeat = parseInt(ctag['number-columns-repeated']||"1",10) || 1;
+					if(opts.sheetStubs) {
+						while(colpeat-- > 0) {
+							if(opts.dense) { if(!ws["!data"][R]) ws["!data"][R] = []; ws["!data"][R][C] = {t:'z'}; }
+							else ws[encode_cell({r:R,c:C})] = {t:'z'};
+							++C;
+						} --C;
+					}
+					else C += colpeat - 1;
 				}
 				textp = ""; textR = [];
 				break; /* stub */
@@ -317,7 +329,7 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 				if(Rn[0].charAt(Rn[0].length-2) === '/') {
 					++C;
 					ctag = parsexmltag(Rn[0], false);
-					colpeat = parseInt(ctag['number-columns-repeated']||"1", 10);
+					colpeat = parseInt(ctag['number-columns-repeated']||"1", 10)||1;
 					q = ({t:'z', v:null/*:: , z:null, w:"",c:[]*/}/*:any*/);
 					if(ctag.formula && opts.cellFormula != false) q.f = ods_to_csf_formula(unescapexml(ctag.formula));
 					if(ctag["style-name"] && styles[ctag["style-name"]]) q.z = styles[ctag["style-name"]];
@@ -341,6 +353,7 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 					if(R < range.s.r) range.s.r = R;
 					if(rptR > range.e.r) range.e.r = rptR;
 					ctag = parsexmltag(Rn[0], false);
+					ctag2 = parsexmltagraw(Rn[0], true);
 					comments = []; comment = ({}/*:any*/);
 					q = ({t:ctag['数据类型'] || ctag['value-type'], v:null/*:: , z:null, w:"",c:[]*/}/*:any*/);
 					if(ctag["style-name"] && styles[ctag["style-name"]]) q.z = styles[ctag["style-name"]];
@@ -360,10 +373,12 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 									q.F = arrayf[i][1];
 					}
 					if(ctag['number-columns-spanned'] || ctag['number-rows-spanned']) {
-						mR = parseInt(ctag['number-rows-spanned'],10) || 0;
-						mC = parseInt(ctag['number-columns-spanned'],10) || 0;
-						mrange = {s: {r:R,c:C}, e:{r:R + mR-1,c:C + mC-1}};
-						merges.push(mrange);
+						mR = parseInt(ctag['number-rows-spanned']||"1",10) || 1;
+						mC = parseInt(ctag['number-columns-spanned']||"1",10) || 1;
+						if(mR * mC > 1) {
+							mrange = {s: {r:R,c:C}, e:{r:R + mR-1,c:C + mC-1}};
+							merges.push(mrange);
+						}
 					}
 
 					/* 19.675.2 table:number-columns-repeated */
@@ -394,6 +409,9 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 					}
 				} else {
 					isstub = false;
+					if(ctag2['calcext:value-type'] == "error" && RBErr[textp] != null) {
+						q.t = 'e'; q.w = textp; q.v = RBErr[textp];
+					}
 					if(q.t === 's') {
 						q.v = textp || '';
 						if(textR.length) q.R = textR;
@@ -515,12 +533,16 @@ function parse_content_xml(d/*:string*/, _opts, _nfm)/*:Workbook*/ {
 			case 'style': { // 16.2 <style:style>
 				var styletag = parsexmltag(Rn[0], false);
 				if(styletag["family"] == "table-cell" && number_format_map[styletag["data-style-name"]]) styles[styletag["name"]] = number_format_map[styletag["data-style-name"]];
+				else if(styletag["family"] == "table") tstyles[styletag["name"]] = styletag;
 			} break;
 			case 'map': break; // 16.3 <style:map>
 			case 'font-face': break; // 16.21 <style:font-face>
 
 			case 'paragraph-properties': break; // 17.6 <style:paragraph-properties>
-			case 'table-properties': break; // 17.15 <style:table-properties>
+			case 'table-properties': { // 17.15 <style:table-properties>
+				var proptag = parsexmltag(Rn[0], false);
+				if(styletag && styletag.family == "table") styletag.display = proptag.display;
+			} break;
 			case 'table-column-properties': break; // 17.16 <style:table-column-properties>
 			case 'table-row-properties': break; // 17.17 <style:table-row-properties>
 			case 'table-cell-properties': break; // 17.18 <style:table-cell-properties>
@@ -792,4 +814,3 @@ function parse_fods(data/*:string*/, opts/*:?ParseOpts*/)/*:Workbook*/ {
 	wb.bookType = "fods";
 	return wb;
 }
-

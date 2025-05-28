@@ -24,12 +24,12 @@ export function readFile(filename: string, opts?: ParsingOptions): WorkBook;
 /** Attempts to parse data */
 export function read(data: any, opts?: ParsingOptions): WorkBook;
 /** Attempts to write or download workbook data to file */
-export function writeFile(data: WorkBook, filename: string, opts?: WritingOptions): any;
+export function writeFile(data: WorkBook, filename: string, opts?: WritingOptions): void;
 /** Attempts to write or download workbook data to XLSX file */
-export function writeFileXLSX(data: WorkBook, filename: string, opts?: WritingOptions): any;
+export function writeFileXLSX(data: WorkBook, filename: string, opts?: WritingOptions): void;
 /** Attempts to write or download workbook data to file asynchronously */
 type CBFunc = () => void;
-export function writeFileAsync(filename: string, data: WorkBook, opts: WritingOptions | CBFunc, cb?: CBFunc): any;
+export function writeFileAsync(filename: string, data: WorkBook, opts: WritingOptions | CBFunc, cb?: CBFunc): void;
 /** Attempts to write the workbook data */
 export function write(data: WorkBook, opts: WritingOptions): any;
 /** Attempts to write the workbook data as XLSX */
@@ -277,7 +277,7 @@ export interface WritingOptions extends CommonOptions {
      */
     compression?: boolean;
 
-    /** Overwride theme XML when exporting to XLSX/XLSM/XLSB */
+    /** Override theme XML when exporting to XLSX/XLSM/XLSB */
     themeXLSX?: string;
 
     /**
@@ -332,6 +332,8 @@ export interface WritingOptions extends CommonOptions {
         cellStyle?: (defXml: string) => string,
         extendCellXfs?: (cellXfs: any)=> any,
     }
+    /** Skip certain validity checks (NOTE: generated files may not open in Excel) */
+    unsafe?: boolean;
 }
 
 /** Workbook Object */
@@ -590,14 +592,14 @@ export interface Sheet {
      * Dense-mode  store cells in the '!data' key
      * Special keys start with '!'
      */
-    [cell: string]: CellObject | CellObject[][] | SheetKeys | any;
+    [cell: string]: CellObject | DenseSheetData | SheetKeys | any;
 
     /**
      * Dense-mode worksheets store data in an array of arrays
      *
      * Cells are accessed with sheet['!data'][R][C] (where R and C are 0-indexed)
      */
-    '!data'?: CellObject[][];
+    '!data'?: DenseSheetData;
 
     /** Sheet type */
     '!type'?: SheetType;
@@ -614,15 +616,16 @@ export interface DenseSheet extends Sheet {
      * Special keys start with '!'
      * Dense-mode worksheets store data in the '!data' key
      */
-    [cell: string]: CellObject[][] | SheetKeys | any;
+    [cell: string]: DenseSheetData | SheetKeys | any;
 
     /**
      * Dense-mode worksheets store data in an array of arrays
      *
      * Cells are accessed with sheet['!data'][R][C] (where R and C are 0-indexed)
      */
-    '!data': CellObject[][];
+    '!data': DenseSheetData;
 }
+export type DenseSheetData = ((CellObject|undefined)[]|undefined)[];
 /** General object representing a sparse Sheet (worksheet or chartsheet) */
 export interface SparseSheet extends Sheet {
     /**
@@ -665,14 +668,7 @@ export interface WorkSheet extends Sheet {
     '!autofilter'?: AutoFilterInfo;
 }
 /** Dense Worksheet Object */
-export interface DenseWorkSheet extends DenseSheet {
-    /**
-     * Dense-mode worksheets store data in an array of arrays
-     *
-     * Cells are accessed with sheet['!data'][R][C] (where R and C are 0-indexed)
-     */
-    '!data': CellObject[][];
-}
+export interface DenseWorkSheet extends DenseSheet {}
 
 /**
  * Worksheet Object with CellObject type
@@ -851,6 +847,14 @@ export interface Sheet2JSONOpts extends DateNFOption {
     UTC?: boolean;
 }
 
+export interface Sheet2FormulaOpts {
+    /**
+     * If false, only export cells with formulae.
+     * By default, synthetic formulae are generated for each cell.
+     */
+    values?: boolean;
+}
+
 export interface UTCDateOption {
     /**
      * If true, dates are interpreted using the UTC methods
@@ -949,7 +953,7 @@ export interface XLSX$Utils {
     sheet_to_html(worksheet: WorkSheet, options?: Sheet2HTMLOpts): string;
 
     /** Generates a list of the formulae (with value fallbacks) */
-    sheet_to_formulae(worksheet: WorkSheet): string[];
+    sheet_to_formulae(worksheet: WorkSheet, options?: Sheet2FormulaOpts): string[];
 
     /* --- Cell Address Utilities --- */
 
@@ -1035,14 +1039,38 @@ export interface XLSX$Consts {
     SHEET_VERYHIDDEN: 2;
 }
 
-/** NODE ONLY! these return Readable Streams */
+export interface StrideOption {
+    /** Number of rows to write per step */
+    stride?: number;
+}
+
+export interface XLMLStreamOpts extends WritingOptions, StrideOption {}
+
+/**
+ * Streaming write methods
+ *
+ * These methods are directly compatible with NodeJS `stream.Readable` API
+ *
+ * Web Streams (modern browsers) can play nice with NodeJS streams. See the Web
+ * Demo at https://docs.sheetjs.com/docs/demos/bigdata/worker#streaming-write
+ *
+ * NOTE: These methods are not included in the `xlsx.mini.min.js` build!
+ */
 export interface StreamUtils {
+    /** Set `Readable` (for environments that do not support NodeJS Streams) */
+    set_readable(Readable: any): void;
+
+    /* --- Worksheet writers --- */
+
     /** CSV output stream, generate one line at a time */
     to_csv(sheet: WorkSheet, opts?: Sheet2CSVOpts): any;
     /** HTML output stream, generate one line at a time */
     to_html(sheet: WorkSheet, opts?: Sheet2HTMLOpts): any;
     /** JSON object stream, generate one row at a time */
     to_json(sheet: WorkSheet, opts?: Sheet2JSONOpts): any;
-    /** Set `Readable` (internal) */
-    set_readable(Readable: any): void;
+
+    /* --- Workbook writers --- */
+
+    /** XLML output string stream (bookType `xlml`) */
+    to_xlml(data: WorkBook, opts?: XLMLStreamOpts): any;
 }
