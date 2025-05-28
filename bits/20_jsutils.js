@@ -136,11 +136,19 @@ function cc2str(arr/*:Array<number>*/, debomit)/*:string*/ {
 }
 
 function dup(o/*:any*/)/*:any*/ {
+	var oc = dup_impl(o);
+	if (o.xlsxCss) {
+		oc.xlsxCss = o.xlsxCss;
+	}
+	return oc;
+}
+
+function dup_impl(o/*:any*/)/*:any*/ {
 	if(typeof JSON != 'undefined' && !Array.isArray(o)) return JSON.parse(JSON.stringify(o));
 	if(typeof o != 'object' || o == null) return o;
 	if(o instanceof Date) return new Date(o.getTime());
 	var out = {};
-	for(var k in o) if(Object.prototype.hasOwnProperty.call(o, k)) out[k] = dup(o[k]);
+	for(var k in o) if(Object.prototype.hasOwnProperty.call(o, k)) out[k] = dup_impl(o[k]);
 	return out;
 }
 

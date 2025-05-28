@@ -24,7 +24,7 @@ FLOWTARGET=$(LIB).flow.js
 FLOWAUX=$(patsubst %.js,%.flow.js,$(AUXTARGETS))
 AUXSCPTS=xlsxworker.js
 FLOWTGTS=$(TARGET) $(AUXTARGETS) $(AUXSCPTS) $(MINITGT)
-UGLIFYOPTS=--support-ie8 -m
+UGLIFYOPTS=--screw-ie8 -m
 CLOSURE=/usr/local/lib/node_modules/google-closure-compiler/compiler.jar
 
 ## Main Targets
@@ -94,7 +94,7 @@ dist: dist-deps $(TARGET) bower.json ## Prepare JS files for distribution
 	@# extendscript
 	cat <(printf '\xEF\xBB\xBF') <(head -n 1 bits/00_header.js) shim.js $(DISTHDR) $(REQS) dist/$(TARGET) > dist/$(LIB).extendscript.js
 	@# zahl
-	cp modules/xlsx.zahl.js modules/xlsx.zahl.mjs dist/
+	test -f modules/xlsx.zahl.js && cp modules/xlsx.zahl.js modules/xlsx.zahl.mjs dist/ || true
 	@#
 	rm dist/$(TARGET) dist/$(MINITGT)
 

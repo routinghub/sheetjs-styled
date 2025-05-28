@@ -57,6 +57,20 @@ function default_margins(margins/*:Margins*/, mode/*:?string*/) {
 	if(margins.footer == null) margins.footer = defs[5];
 }
 
+function style_equals(a, b)
+{
+	return a != undefined
+		&& b != undefined
+		&& a.fontId == b.fontId
+		&& a.fillId == b.fillId
+		&& a.borderId == b.borderId
+		&& a.xfId == b.xfId
+		&& (a.alignment !== undefined && b.alignment !== undefined
+			&& a.alignment.vertical == b.alignment.vertical
+			&& a.alignment.horizontal == b.alignment.horizontal
+			&& a.alignment.wrapText == b.alignment.wrapText);
+}
+
 function get_cell_style(styles/*:Array<any>*/, cell/*:Cell*/, opts) {
 	var z = opts.revssf[cell.z != null ? cell.z : "General"];
 	var i = 0x3c, len = styles.length;
@@ -69,15 +83,29 @@ function get_cell_style(styles/*:Array<any>*/, cell/*:Cell*/, opts) {
 			break;
 		}
 	}
-	for(i = 0; i != len; ++i) if(styles[i].numFmtId === z) return i;
-	styles[len] = {
-		numFmtId:z,
-		fontId:0,
-		fillId:0,
-		borderId:0,
-		xfId:0,
-		applyNumberFormat:1
+	for(i = 0; i != len; ++i) {
+		if(styles[i].numFmtId === z && (!cell.s || style_equals(styles[i], cell.s))) {
+			return i;
+		}
+	}
+	// see write_cellXfs for writing
+	var style = {
+		numFmtId: z,
+		applyNumberFormat: 1,
+		fontId: cell.s ? cell.s.fontId : 0,
+		fillId: cell.s ? cell.s.fillId : 0,
+		borderId: cell.s ? cell.s.borderId : 0,
+		xfId: cell.s ? cell.s.xfId : 0,
+		alignment: cell.s ? cell.s.alignment : undefined,
 	};
+	cell.s && (
+		cell.s.fontId && (style.applyFont = 1),
+		cell.s.fillId && (style.applyFill = 1),
+		cell.s.borderId && (style.applyBorder = 1),
+		cell.s.alignment && (style.applyAlignment = 1)
+	);
+
+	styles[len] = style;
 	return len;
 }
 

@@ -3416,11 +3416,19 @@ function cc2str(arr, debomit) {
 }
 
 function dup(o) {
+	var oc = dup_impl(o);
+	if (o.xlsxCss) {
+		oc.xlsxCss = o.xlsxCss;
+	}
+	return oc;
+}
+
+function dup_impl(o) {
 	if(typeof JSON != 'undefined' && !Array.isArray(o)) return JSON.parse(JSON.stringify(o));
 	if(typeof o != 'object' || o == null) return o;
 	if(o instanceof Date) return new Date(o.getTime());
 	var out = {};
-	for(var k in o) if(Object.prototype.hasOwnProperty.call(o, k)) out[k] = dup(o[k]);
+	for(var k in o) if(Object.prototype.hasOwnProperty.call(o, k)) out[k] = dup_impl(o[k]);
 	return out;
 }
 
@@ -11240,7 +11248,14 @@ function write_cellXfs(cellXfs) {
 	var o = [];
 	o[o.length] = (writextag('cellXfs',null));
 	cellXfs.forEach(function(c) {
-		o[o.length] = (writextag('xf', null, c));
+		if (c.alignment) {
+			var alignment = c.alignment;
+			delete c.alignment;
+			o[o.length] = (writextag('xf', writextag('alignment', null, alignment), c));
+		}
+		else {
+			o[o.length] = (writextag('xf', null, c));
+		}
 	});
 	o[o.length] = ("</cellXfs>");
 	if(o.length === 2) return "";
@@ -11290,16 +11305,22 @@ return function parse_sty_xml(data, themes, opts) {
 };
 })();
 
+function apply_ifdef(cb, defv) {
+	return cb ? cb(defv) : defv;
+}
+
 function write_sty_xml(wb, opts) {
 	var o = [XML_HEADER, writextag('styleSheet', null, {
 		'xmlns': XMLNS_main[0],
 		'xmlns:vt': XMLNS.vt
 	})], w;
 	if(wb.SSF && (w = write_numFmts(wb.SSF)) != null) o[o.length] = w;
-	o[o.length] = ('<fonts count="1"><font><sz val="12"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font></fonts>');
-	o[o.length] = ('<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>');
-	o[o.length] = ('<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>');
-	o[o.length] = ('<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>');
+	var css = opts.xlsxCss;
+	o[o.length] = apply_ifdef(css.fonts, '<fonts count="1"><font><sz val="12"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font></fonts>');
+	o[o.length] = apply_ifdef(css.fills, '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>');
+	o[o.length] = apply_ifdef(css.borders, '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>');
+	o[o.length] = apply_ifdef(css.cellStyle, '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>');
+	apply_ifdef(css.extendCellXfs, opts.cellXfs);
 	if((w = write_cellXfs(opts.cellXfs))) o[o.length] = (w);
 	o[o.length] = ('<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>');
 	o[o.length] = ('<dxfs count="0"/>');
@@ -15504,6 +15525,20 @@ function default_margins(margins, mode) {
 	if(margins.footer == null) margins.footer = defs[5];
 }
 
+function style_equals(a, b)
+{
+	return a != undefined
+		&& b != undefined
+		&& a.fontId == b.fontId
+		&& a.fillId == b.fillId
+		&& a.borderId == b.borderId
+		&& a.xfId == b.xfId
+		&& (a.alignment !== undefined && b.alignment !== undefined
+			&& a.alignment.vertical == b.alignment.vertical
+			&& a.alignment.horizontal == b.alignment.horizontal
+			&& a.alignment.wrapText == b.alignment.wrapText);
+}
+
 function get_cell_style(styles, cell, opts) {
 	var z = opts.revssf[cell.z != null ? cell.z : "General"];
 	var i = 0x3c, len = styles.length;
@@ -15516,15 +15551,29 @@ function get_cell_style(styles, cell, opts) {
 			break;
 		}
 	}
-	for(i = 0; i != len; ++i) if(styles[i].numFmtId === z) return i;
-	styles[len] = {
-		numFmtId:z,
-		fontId:0,
-		fillId:0,
-		borderId:0,
-		xfId:0,
-		applyNumberFormat:1
+	for(i = 0; i != len; ++i) {
+		if(styles[i].numFmtId === z && (!cell.s || style_equals(styles[i], cell.s))) {
+			return i;
+		}
+	}
+	// see write_cellXfs for writing
+	var style = {
+		numFmtId: z,
+		applyNumberFormat: 1,
+		fontId: cell.s ? cell.s.fontId : 0,
+		fillId: cell.s ? cell.s.fillId : 0,
+		borderId: cell.s ? cell.s.borderId : 0,
+		xfId: cell.s ? cell.s.xfId : 0,
+		alignment: cell.s ? cell.s.alignment : undefined,
 	};
+	cell.s && (
+		cell.s.fontId && (style.applyFont = 1),
+		cell.s.fillId && (style.applyFill = 1),
+		cell.s.borderId && (style.applyBorder = 1),
+		cell.s.alignment && (style.applyAlignment = 1)
+	);
+
+	styles[len] = style;
 	return len;
 }
 
