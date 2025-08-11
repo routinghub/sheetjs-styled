@@ -326,6 +326,7 @@ export interface WritingOptions extends CommonOptions {
      *  See: get_cell_style, write_sty_xml
      */
     xlsxCss?: {
+        numFmts?: (defXml: string) => string,
         fonts?: (defXml: string) => string,
         fills?: (defXml: string) => string,
         borders?: (defXml: string) => string,

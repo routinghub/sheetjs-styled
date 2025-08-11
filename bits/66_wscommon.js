@@ -90,7 +90,9 @@ function get_cell_style(styles/*:Array<any>*/, cell/*:Cell*/, opts) {
 	}
 	// see write_cellXfs for writing
 	var style = {
-		numFmtId: z,
+		// rh override: use defined numFmtId if defined
+		// See: vrp-solver/frontend/src/lib/excel/exporter.ts
+		numFmtId: cell.s ? cell.s.numFmtId : z,
 		applyNumberFormat: 1,
 		fontId: cell.s ? cell.s.fontId : 0,
 		fillId: cell.s ? cell.s.fillId : 0,
