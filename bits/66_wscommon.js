@@ -59,16 +59,17 @@ function default_margins(margins/*:Margins*/, mode/*:?string*/) {
 
 function style_equals(a, b)
 {
-	return a != undefined
-		&& b != undefined
-		&& a.fontId == b.fontId
-		&& a.fillId == b.fillId
-		&& a.borderId == b.borderId
-		&& a.xfId == b.xfId
-		&& (a.alignment !== undefined && b.alignment !== undefined
-			&& a.alignment.vertical == b.alignment.vertical
-			&& a.alignment.horizontal == b.alignment.horizontal
-			&& a.alignment.wrapText == b.alignment.wrapText);
+	if (a == undefined || b == undefined) return false;
+	if (a.numFmtId !== b.numFmtId) return false;
+	if (a.fontId !== b.fontId) return false;
+	if (a.fillId !== b.fillId) return false;
+	if (a.borderId !== b.borderId) return false;
+	if (a.xfId !== b.xfId) return false;
+	if (a.alignment === undefined && b.alignment === undefined) return true;
+	if (a.alignment === undefined || b.alignment === undefined) return false;
+	return a.alignment.vertical == b.alignment.vertical
+		&& a.alignment.horizontal == b.alignment.horizontal
+		&& a.alignment.wrapText == b.alignment.wrapText;
 }
 
 function get_cell_style(styles/*:Array<any>*/, cell/*:Cell*/, opts) {
@@ -83,23 +84,40 @@ function get_cell_style(styles/*:Array<any>*/, cell/*:Cell*/, opts) {
 			break;
 		}
 	}
+	// Resolve every numeric id to a concrete value (default 0) before both lookup
+	// and write. Two bugs are fixed here together:
+	//   1. The lookup used to compare styles[i].numFmtId against `z` (derived from
+	//      cell.z), while new entries were written with cell.s.numFmtId. Custom
+	//      formats applied via cell.s never matched existing entries, so every
+	//      formatted cell created a fresh xf and styles.xml ballooned.
+	//   2. Missing fillId/borderId/xfId leaked into the XML as the string
+	//      "undefined" (and prevented dedup, since "undefined" !== 0). Defaulting
+	//      to 0 matches the OOXML schema (cell xf must reference real indices).
+	var resolved = {
+		numFmtId: (cell.s && cell.s.numFmtId !== undefined) ? cell.s.numFmtId : (z || 0),
+		fontId:   (cell.s && cell.s.fontId   !== undefined) ? cell.s.fontId   : 0,
+		fillId:   (cell.s && cell.s.fillId   !== undefined) ? cell.s.fillId   : 0,
+		borderId: (cell.s && cell.s.borderId !== undefined) ? cell.s.borderId : 0,
+		xfId:     (cell.s && cell.s.xfId     !== undefined) ? cell.s.xfId     : 0,
+		alignment: cell.s ? cell.s.alignment : undefined,
+	};
 	for(i = 0; i != len; ++i) {
-		if(styles[i].numFmtId === z && (!cell.s || style_equals(styles[i], cell.s))) {
+		if(style_equals(styles[i], resolved)) {
 			return i;
 		}
 	}
 	// see write_cellXfs for writing
 	var style = {
-		// rh override: use defined numFmtId if defined
-		// See: vrp-solver/frontend/src/lib/excel/exporter.ts
-		numFmtId: cell.s ? cell.s.numFmtId : z,
+		numFmtId: resolved.numFmtId,
 		applyNumberFormat: 1,
-		fontId: cell.s ? cell.s.fontId : 0,
-		fillId: cell.s ? cell.s.fillId : 0,
-		borderId: cell.s ? cell.s.borderId : 0,
-		xfId: cell.s ? cell.s.xfId : 0,
-		alignment: cell.s ? cell.s.alignment : undefined,
+		fontId: resolved.fontId,
+		fillId: resolved.fillId,
+		borderId: resolved.borderId,
+		xfId: resolved.xfId,
 	};
+	// Only attach alignment when defined; otherwise write_cellXfs's else-branch
+	// would serialize the property as the string "undefined".
+	if (resolved.alignment !== undefined) style.alignment = resolved.alignment;
 	cell.s && (
 		cell.s.fontId && (style.applyFont = 1),
 		cell.s.fillId && (style.applyFill = 1),

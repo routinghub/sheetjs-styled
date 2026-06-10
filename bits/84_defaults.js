@@ -39,7 +39,7 @@ fix_opts_func([
 
 	['bookType', 'xlsx'], /* Type of workbook (xlsx/m/b) */
 
-	['compression', false], /* Use file compression */
+	['compression', true], /* Use file compression (DEFLATE). XLSX is a ZIP package and Excel itself always compresses; defaulting to Stored produces files an order of magnitude larger than expected. */
 
 	['WTF', false] /* WTF mode (throws errors) */
 ])(opts);
